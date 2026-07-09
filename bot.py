@@ -47,7 +47,7 @@ def keep_alive():
     print("🌐 Flask Keep‑Alive started.")
 
 # ==================== CONFIGURATION ====================
-TOKEN = '6656834082:AAGeZGrXYyPwkvq30ne8Y1D19i2O3cjZ4XY'   # Replace with your bot token
+TOKEN = '8683527113:AAFfA2njjEoEGRIsZPu-q4oLZHD837SB9Ug'   # Replace with your bot token
 OWNER_ID = 2119464081                                      # Replace with your Telegram ID
 ADMIN_ID = 2119464081                                      # Can be same as OWNER
 YOUR_USERNAME = '@Xricx0'                                  # Your public username
