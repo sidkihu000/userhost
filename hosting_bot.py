@@ -75,7 +75,7 @@ def initialize_keepalive_server():
 # ──────────────────────────────────────────────────────────────────────────────
 # SECTION 3: CONSTANTS, PRESETS & RESOURCE PAYLOADS
 # ──────────────────────────────────────────────────────────────────────────────
-BOT_TOKEN = '6248614957:AAGII_pN7RJiz6xxuTV-4zf9KGt2_s6ncYU'
+BOT_TOKEN = '7096730412:AAHhv6RLDMW_WXfo2QMUuEdRRRTrAMOTsn0'
 PRIMARY_OWNER_ID = 2119464081
 SUPPORT_CHANNEL_URL = 'https://t.me/+5uCnxp3U1gMwZjQ1'
 
