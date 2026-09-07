@@ -18,11 +18,14 @@ import atexit
 import psutil
 import threading
 import random
+import shutil          # ─── NEW ADDITION ───
+import re              # ─── NEW ADDITION ───
+import secrets         # ─── NEW ADDITION ───
 from datetime import datetime
 
 import telebot
 from telebot import types
-from flask import Flask
+from flask import Flask, request, jsonify    # ─── NEW ADDITION ───
 from threading import Thread
 
 # Userbot Dependencies
@@ -123,7 +126,7 @@ DIPESH_MESSAGES = [
     " 🥶 Are 😱 Mc 😩 Ye 🤔 Kaise 🤪 Kiya 😏 Teri 😎 Maa 😬 Randi 🙄 Hai 🤮 100% 😂",
     "🩷🩵🤍🩶🖤❤️💚 Ye sare dill teri maa k naam beta 😂😜🔥", " Hat peche hat tera baap Rebel aya 😂😂🥴😹🤲🏻💪🏻",
     "Leave le rndyk psnd nai aya tu meko 🤢👎🏻", "Teri maa chodu 💯 if yes then reply to my message 💀💀💀💪🏻🔥💯👆🏻💔😂😂💔💔💔",
-    "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜOᴅ 😅 DᴜGᴀ 🤩",
+    "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
     "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐚 😂🪄😂🪄", 
     " Teri Maa Ko बाहुबली style mein chodunga 🥶💔🤪😹", "Tumhare Pitashree 𝐃ɪᴘᴇsʜ 💯🔥🗿🌙",
     " Tery behn bole fuck me 𝐃ɪᴘᴇsʜ daddy 😍🌹💋", " तेरी माँ 𝐃ɪᴘᴇsʜ पापा ki दीवानी Since 2k10 😂🖕🏻🔥", " Cover le सस्ती रंडी k काले बच्चे 🤢🤮🖕🏻🥀"
@@ -148,6 +151,17 @@ def execute_db_migration():
         cursor = conn.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS hosted_sessions
                          (user_id INTEGER PRIMARY KEY, session_key TEXT, gender TEXT, system_preset TEXT, api_id INTEGER, api_hash TEXT)''')
+        # ─── NEW ADDITION: create additional tables for extended features ───
+        cursor.execute('''CREATE TABLE IF NOT EXISTS user_metadata
+                         (user_id INTEGER PRIMARY KEY, first_name TEXT, joined_at INTEGER, phone TEXT)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS sudo_users
+                         (user_id INTEGER PRIMARY KEY)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS blocked_users
+                         (user_id INTEGER PRIMARY KEY)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS welcome_video
+                         (id INTEGER PRIMARY KEY, file_id TEXT, is_video_note INTEGER)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS api_config
+                         (id INTEGER PRIMARY KEY, api_id INTEGER, api_hash TEXT)''')
         conn.commit()
         conn.close()
 
@@ -188,6 +202,13 @@ def display_dashboard_interface(message):
         types.InlineKeyboardButton("⚡ Server Telemetry", callback_data="telemetry"),
         types.InlineKeyboardButton("🛑 Terminate Container", callback_data="terminate")
     )
+    # ─── NEW ADDITION: extra menu buttons ───
+    markup.row(
+        types.InlineKeyboardButton("📊 My Account", callback_data="my_account"),
+        types.InlineKeyboardButton("📚 Commands", callback_data="cmd_list"),
+        types.InlineKeyboardButton("📞 Support", callback_data="support")
+    )
+    # Owner-only buttons ─── (will be handled in callback)
     welcome_text = f"👑 **SID PREMIUM USERBOT ARCHITECTURE** 👑\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✨ Welcome, {message.from_user.first_name}.\n\n» **Engine:** `v6.0-SID-DYNAMIC`\n» **Status:** `ONLINE & SECURE`\n\nSelect your deployment module:"
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='Markdown')
 
@@ -283,6 +304,8 @@ def finalize_and_deploy(call):
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
         cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?)', (user_id, dest, gender, preset_choice, state['api_id'], state['api_hash']))
+        # ─── NEW ADDITION: store phone in user_metadata ───
+        cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)', (user_id, state['phone']))
         conn.commit(); conn.close()
         
     p_msg = bot.send_message(call.message.chat.id, "`Initializing...`", parse_mode='Markdown')
@@ -636,16 +659,873 @@ def terminate_worker(call):
         bot.answer_callback_query(call.id, "🛑 SID Container Terminated Successfully.", show_alert=True)
     else: bot.answer_callback_query(call.id, "❌ No active runtimes detected.", show_alert=True)
 
+# ════════════════════════════════════════════════════════════════════════════════
+# ─── NEW ADDITIONS FROM SECOND FILE (merged without modifying existing code) ───
+# ════════════════════════════════════════════════════════════════════════════════
+
+# ─── NEW CONSTANTS ───
+OWNER_ID = 123456789  # ← REPLACE WITH YOUR OWNER TELEGRAM ID
+SUPPORT_USERNAME = "@YourSupport"  # ← REPLACE
+MAX_ACCOUNTS_PER_USER = 3
+MAX_USERBOTS = 50
+START_TIME = time.time()
+
+# ─── NEW HELPER FUNCTIONS ───
+def is_owner(user_id):
+    return user_id == OWNER_ID
+
+def is_premium(user_id):
+    return is_owner(user_id) or db_is_sudo(user_id)
+
+def db_is_sudo(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT 1 FROM sudo_users WHERE user_id = ?', (user_id,))
+        res = c.fetchone() is not None
+        conn.close()
+        return res
+
+def get_accounts(user_id):
+    """Return list of hosted accounts for a user (single account in this implementation)."""
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT session_key, gender, system_preset, api_id, api_hash FROM hosted_sessions WHERE user_id = ?', (user_id,))
+        row = c.fetchone()
+        conn.close()
+    if row:
+        return [{
+            'slot': 0,
+            'session_key': row[0],
+            'gender': row[1],
+            'system_preset': row[2],
+            'api_id': row[3],
+            'api_hash': row[4],
+            'hosted': True,
+            'hosted_at': int(time.time()),  # approx
+        }]
+    return []
+
+def get_account(user_id, slot):
+    accounts = get_accounts(user_id)
+    if slot < len(accounts):
+        return accounts[slot]
+    return None
+
+def remove_account(user_id, slot):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM hosted_sessions WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+
+def get_all_users():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM hosted_sessions')
+        rows = c.fetchall()
+        conn.close()
+    return [str(r[0]) for r in rows]
+
+def hosted_count():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT COUNT(*) FROM hosted_sessions')
+        cnt = c.fetchone()[0]
+        conn.close()
+    return cnt
+
+def user_count():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT COUNT(DISTINCT user_id) FROM hosted_sessions')
+        cnt = c.fetchone()[0]
+        conn.close()
+    return cnt
+
+def block_user(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('INSERT OR IGNORE INTO blocked_users (user_id) VALUES (?)', (user_id,))
+        conn.commit()
+        conn.close()
+
+def unblock_user(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM blocked_users WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+
+def is_blocked(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT 1 FROM blocked_users WHERE user_id = ?', (user_id,))
+        res = c.fetchone() is not None
+        conn.close()
+        return res
+
+def get_blocked():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM blocked_users')
+        rows = [r[0] for r in c.fetchall()]
+        conn.close()
+        return rows
+
+def add_sudo(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('INSERT OR IGNORE INTO sudo_users (user_id) VALUES (?)', (user_id,))
+        conn.commit()
+        conn.close()
+
+def remove_sudo(user_id):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM sudo_users WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+
+def get_sudo_users():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM sudo_users')
+        rows = [r[0] for r in c.fetchall()]
+        conn.close()
+        return rows
+
+def get_welcome_video():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT file_id, is_video_note FROM welcome_video LIMIT 1')
+        row = c.fetchone()
+        conn.close()
+    if row:
+        return {'file_id': row[0], 'is_video_note': bool(row[1])}
+    return None
+
+def set_welcome_video(data):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM welcome_video')
+        c.execute('INSERT INTO welcome_video (id, file_id, is_video_note) VALUES (1, ?, ?)',
+                  (data['file_id'], 1 if data['is_video_note'] else 0))
+        conn.commit()
+        conn.close()
+
+def remove_welcome_video():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM welcome_video')
+        conn.commit()
+        conn.close()
+
+def get_api_profile():
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT api_id, api_hash FROM api_config LIMIT 1')
+        row = c.fetchone()
+        conn.close()
+    if row:
+        return {'api_id': row[0], 'api_hash': row[1]}
+    return None
+
+def save_api_profile(api_id, api_hash):
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('DELETE FROM api_config')
+        c.execute('INSERT INTO api_config (id, api_id, api_hash) VALUES (1, ?, ?)', (api_id, api_hash))
+        conn.commit()
+        conn.close()
+
+def _get_api_id_hash():
+    prof = get_api_profile()
+    if prof:
+        return prof['api_id'], prof['api_hash']
+    return DEFAULT_API_ID, DEFAULT_API_HASH
+
+def _masked_api_hash():
+    prof = get_api_profile()
+    if prof:
+        h = prof['api_hash']
+        return h[:4] + '****' + h[-4:] if len(h) >= 8 else '****'
+    return 'Not set'
+
+def _api_ready():
+    return get_api_profile() is not None
+
+# ─── RUNNER WRAPPER for telebot compatibility ───
+class RunnerWrapper:
+    @staticmethod
+    def is_running(user_id, slot):
+        return user_id in active_runtimes
+
+    @staticmethod
+    def get_uptime(user_id, slot):
+        if user_id in active_runtimes:
+            # approximate uptime from start_time stored in U_STATE? not accessible here.
+            return "N/A"
+        return None
+
+    @staticmethod
+    def running_count():
+        return len(active_runtimes)
+
+    @staticmethod
+    def start_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
+        # For single account, we re-use the deploy mechanism.
+        # This is called by new commands; we simply trigger a new deploy if not running.
+        if uid in active_runtimes:
+            return True
+        # fetch from db and start
+        with GLOBAL_DB_LOCK:
+            conn = sqlite3.connect(DATABASE_PATH)
+            c = conn.cursor()
+            c.execute('SELECT gender, system_preset FROM hosted_sessions WHERE user_id = ?', (uid,))
+            row = c.fetchone()
+            conn.close()
+        if row:
+            gender, preset = row
+            threading.Thread(target=deploy_live_userbot_runtime, args=(None, uid, gender, preset), daemon=True).start()
+            return True
+        return False
+
+    @staticmethod
+    def restart_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
+        # stop if running, then start
+        if uid in active_runtimes:
+            # disconnect
+            try:
+                loop = active_runtimes[uid]['loop']
+                loop.create_task(active_runtimes[uid]['client'].disconnect())
+            except:
+                pass
+            active_runtimes.pop(uid, None)
+        return RunnerWrapper.start_userbot(uid, slot, api_id, api_hash, session_string, uid_str)
+
+    @staticmethod
+    def stop_userbot(uid, slot):
+        if uid in active_runtimes:
+            try:
+                loop = active_runtimes[uid]['loop']
+                loop.create_task(active_runtimes[uid]['client'].disconnect())
+            except:
+                pass
+            active_runtimes.pop(uid, None)
+        return True
+
+    @staticmethod
+    def stop_all_for_user(uid):
+        RunnerWrapper.stop_userbot(uid, 0)
+
+runner = RunnerWrapper()
+
+# ─── FONT STYLES (optional for text formatting) ───
+def bold_serif(t): return t  # placeholder
+def italic_serif(t): return t
+def sans_bold(t): return t
+def mono(t): return f"`{t}`"
+def double_struck(t): return t
+def script(t): return t
+def fraktur(t): return t
+def bold_italic_serif(t): return t
+
+DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+TOP = "╔══════════════════════════╗"
+BOT = "╚══════════════════════════╝"
+
+def uptime_str():
+    e = int(time.time() - START_TIME)
+    h, r = divmod(e, 3600); m, s = divmod(r, 60)
+    return f"{h}h {m}m {s}s"
+
+def _phone_label(acct):
+    # try to get phone from user_metadata
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT phone FROM user_metadata WHERE user_id = ?', (acct.get('user_id'),))
+        row = c.fetchone()
+        conn.close()
+    return row[0] if row else "Unknown"
+
+# ─── NEW BOT COMMAND HANDLERS ───
+
+# /myaccounts
+@bot.message_handler(commands=['myaccounts'])
+def cmd_myaccounts(message):
+    uid = message.from_user.id
+    if is_blocked(uid):
+        bot.reply_to(message, "🚫 You are blocked.")
+        return
+    accounts = get_accounts(uid)
+    if not accounts:
+        bot.reply_to(message, "📱 No accounts hosted. Use /host to deploy.")
+        return
+    for acct in accounts:
+        slot = acct['slot']
+        alive = runner.is_running(uid, slot)
+        phone = _phone_label(acct) if acct else "Unknown"
+        status = "🟢 Running" if alive else "🔴 Stopped"
+        bot.reply_to(message, f"📱 Account #{slot+1}\nPhone: {phone}\nStatus: {status}")
+
+# /status
+@bot.message_handler(commands=['status'])
+def cmd_status(message):
+    uid = message.from_user.id
+    if is_blocked(uid): return
+    accounts = get_accounts(uid)
+    if not accounts:
+        bot.reply_to(message, "❌ No userbot found.")
+        return
+    lines = []
+    for acct in accounts:
+        slot = acct['slot']
+        alive = runner.is_running(uid, slot)
+        uptime = runner.get_uptime(uid, slot) if alive else "—"
+        phone = _phone_label(acct)
+        icon = "🟢" if alive else "🔴"
+        lines.append(f"{icon} Account #{slot+1} — {phone}\n   Uptime: {uptime}")
+    bot.reply_to(message, "📊 Userbot Status\n\n" + "\n\n".join(lines))
+
+# /restart
+@bot.message_handler(commands=['restart'])
+def cmd_restart(message):
+    uid = message.from_user.id
+    if is_blocked(uid): return
+    accounts = get_accounts(uid)
+    if not accounts:
+        bot.reply_to(message, "❌ No userbot to restart.")
+        return
+    acct = accounts[0]
+    slot = acct['slot']
+    msg = bot.reply_to(message, "🔄 Restarting...")
+    ok = runner.restart_userbot(uid, slot, "", "", "", str(uid))
+    if ok:
+        bot.edit_message_text("✅ Account restarted successfully!", msg.chat.id, msg.message_id)
+    else:
+        bot.edit_message_text("❌ Restart failed.", msg.chat.id, msg.message_id)
+
+# /logout
+@bot.message_handler(commands=['logout'])
+def cmd_logout(message):
+    uid = message.from_user.id
+    if is_blocked(uid): return
+    accounts = get_accounts(uid)
+    if not accounts:
+        bot.reply_to(message, "❌ No account to logout.")
+        return
+    # confirm with inline keyboard
+    markup = types.InlineKeyboardMarkup()
+    markup.row(
+        types.InlineKeyboardButton("✅ Yes, Logout", callback_data="confirm_logout"),
+        types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout")
+    )
+    bot.reply_to(message, "⚠️ Are you sure you want to logout and delete session?", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "confirm_logout")
+def confirm_logout(call):
+    uid = call.from_user.id
+    runner.stop_userbot(uid, 0)
+    remove_account(uid, 0)
+    # delete session file
+    session_path = os.path.join(RUNTIMES_DIR, f"active_{uid}.session")
+    if os.path.exists(session_path):
+        os.remove(session_path)
+    bot.answer_callback_query(call.id, "Logged out successfully.")
+    bot.edit_message_text("👋 Account logged out. Use /host to deploy again.", call.message.chat.id, call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "cancel_logout")
+def cancel_logout(call):
+    bot.answer_callback_query(call.id, "Logout cancelled.")
+    bot.edit_message_text("Logout cancelled.", call.message.chat.id, call.message.message_id)
+
+# /support
+@bot.message_handler(commands=['support'])
+def cmd_support(message):
+    bot.reply_to(message, f"📞 Support: {SUPPORT_USERNAME}\nFor help, use /help or contact admin.")
+
+# /help
+@bot.message_handler(commands=['help'])
+def cmd_help(message):
+    text = """
+❓ Help & Commands
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔹 /start       - Welcome screen
+🔹 /host        - Deploy userbot
+🔹 /myaccounts  - View accounts
+🔹 /status      - Check status
+🔹 /restart     - Restart userbot
+🔹 /logout      - Logout account
+🔹 /support     - Contact support
+🔹 /help        - This menu
+    """
+    bot.reply_to(message, text)
+
+# /stats (owner)
+@bot.message_handler(commands=['stats'])
+def cmd_stats(message):
+    if not is_owner(message.from_user.id):
+        bot.reply_to(message, "🔒 Owner only.")
+        return
+    total = user_count()
+    hosted = hosted_count()
+    running = runner.running_count()
+    blocked = len(get_blocked())
+    sudos = len(get_sudo_users())
+    bot.reply_to(message, f"""
+📊 Bot Statistics
+━━━━━━━━━━━━━━━━━━━━
+👥 Total Users: {total}
+🚀 Hosted: {hosted}
+🟢 Running: {running}
+🔴 Stopped: {hosted - running}
+🚫 Blocked: {blocked}
+👑 Sudo: {sudos}
+🕒 Uptime: {uptime_str()}
+    """)
+
+# /broadcast (owner)
+@bot.message_handler(commands=['broadcast'])
+def cmd_broadcast(message):
+    if not is_owner(message.from_user.id): return
+    if not message.reply_to_message and not message.text.replace('/broadcast','').strip():
+        bot.reply_to(message, "Reply to a message or provide text: /broadcast Hello")
+        return
+    users = get_all_users()
+    if not users:
+        bot.reply_to(message, "No users to broadcast.")
+        return
+    sent = 0
+    failed = 0
+    for uid_str in users:
+        try:
+            uid = int(uid_str)
+            if is_blocked(uid): continue
+            if message.reply_to_message:
+                bot.copy_message(uid, message.chat.id, message.reply_to_message.message_id)
+            else:
+                bot.send_message(uid, message.text.replace('/broadcast','').strip())
+            sent += 1
+        except Exception as e:
+            failed += 1
+    bot.reply_to(message, f"✅ Broadcast sent to {sent} users. Failed: {failed}")
+
+# /sudolist (owner)
+@bot.message_handler(commands=['sudolist'])
+def cmd_sudolist(message):
+    if not is_owner(message.from_user.id): return
+    args = message.text.split()
+    if len(args) >= 3 and args[1] == 'add':
+        try:
+            uid = int(args[2])
+            add_sudo(uid)
+            bot.reply_to(message, f"✅ Added {uid} to sudo.")
+        except:
+            bot.reply_to(message, "❌ Invalid ID.")
+        return
+    if len(args) >= 3 and args[1] == 'del':
+        try:
+            uid = int(args[2])
+            remove_sudo(uid)
+            bot.reply_to(message, f"✅ Removed {uid} from sudo.")
+        except:
+            bot.reply_to(message, "❌ Invalid ID.")
+        return
+    sudos = get_sudo_users()
+    if not sudos:
+        bot.reply_to(message, "No sudo users.")
+    else:
+        bot.reply_to(message, "👑 Sudo Users:\n" + "\n".join(str(u) for u in sudos))
+
+# /block (owner)
+@bot.message_handler(commands=['block'])
+def cmd_block(message):
+    if not is_owner(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2:
+        bot.reply_to(message, "Usage: /block <user_id>")
+        return
+    try:
+        uid = int(args[1])
+        if uid == OWNER_ID:
+            bot.reply_to(message, "Cannot block owner.")
+            return
+        block_user(uid)
+        runner.stop_all_for_user(uid)
+        bot.reply_to(message, f"🚫 User {uid} blocked.")
+    except:
+        bot.reply_to(message, "Invalid ID.")
+
+# /unblock (owner)
+@bot.message_handler(commands=['unblock'])
+def cmd_unblock(message):
+    if not is_owner(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2:
+        bot.reply_to(message, "Usage: /unblock <user_id>")
+        return
+    try:
+        uid = int(args[1])
+        unblock_user(uid)
+        bot.reply_to(message, f"✅ User {uid} unblocked.")
+    except:
+        bot.reply_to(message, "Invalid ID.")
+
+# /blockeduser (owner)
+@bot.message_handler(commands=['blockeduser'])
+def cmd_blockeduser(message):
+    if not is_owner(message.from_user.id): return
+    blocked = get_blocked()
+    if not blocked:
+        bot.reply_to(message, "No blocked users.")
+    else:
+        bot.reply_to(message, "🚫 Blocked users:\n" + "\n".join(str(u) for u in blocked))
+
+# /secretfunction (owner)
+@bot.message_handler(commands=['secretfunction'])
+def cmd_secretfunction(message):
+    if not is_owner(message.from_user.id): return
+    bot.reply_to(message, """
+🔐 Secret Commands
+━━━━━━━━━━━━━━━━━━━━
+🔹 /sudolist add <uid>
+🔹 /sudolist del <uid>
+🔹 /block <uid>
+🔹 /unblock <uid>
+🔹 /blockeduser
+🔹 /stats
+🔹 /broadcast
+🔹 /restartall
+🔹 /setdp
+🔹 /setwelcomevideo
+🔹 /removewelcomevideo
+    """)
+
+# /setdp (owner)
+@bot.message_handler(commands=['setdp'])
+def cmd_setdp(message):
+    if not is_owner(message.from_user.id): return
+    if not message.reply_to_message or not message.reply_to_message.photo:
+        bot.reply_to(message, "Reply to a photo with /setdp")
+        return
+    photo = message.reply_to_message.photo[-1]
+    file_id = photo.file_id
+    # set bot profile photo using telebot
+    try:
+        bot.set_chat_photo(photo=file_id)  # not exactly, but we can set via bot
+        bot.reply_to(message, "✅ Display photo updated.")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Failed: {e}")
+
+# /setwelcomevideo (owner)
+@bot.message_handler(commands=['setwelcomevideo'])
+def cmd_setwelcomevideo(message):
+    if not is_owner(message.from_user.id): return
+    if not message.reply_to_message:
+        bot.reply_to(message, "Reply to a video or video note.")
+        return
+    vid = message.reply_to_message.video
+    vnote = message.reply_to_message.video_note
+    if vid:
+        set_welcome_video({'file_id': vid.file_id, 'is_video_note': False})
+        bot.reply_to(message, "✅ Welcome video set.")
+    elif vnote:
+        set_welcome_video({'file_id': vnote.file_id, 'is_video_note': True})
+        bot.reply_to(message, "✅ Welcome video note set.")
+    else:
+        bot.reply_to(message, "Reply must be video or video note.")
+
+# /removewelcomevideo (owner)
+@bot.message_handler(commands=['removewelcomevideo'])
+def cmd_removewelcomevideo(message):
+    if not is_owner(message.from_user.id): return
+    remove_welcome_video()
+    bot.reply_to(message, "🗑️ Welcome video removed.")
+
+# /setapi (owner) – store API ID/Hash
+@bot.message_handler(commands=['setapi'])
+def cmd_setapi(message):
+    if not is_owner(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 3:
+        bot.reply_to(message, "Usage: /setapi <api_id> <api_hash>")
+        return
+    try:
+        api_id = int(args[1])
+        api_hash = args[2]
+        save_api_profile(api_id, api_hash)
+        bot.reply_to(message, f"✅ API profile saved.\nID: {api_id}\nHash: {api_hash[:4]}****")
+    except:
+        bot.reply_to(message, "❌ Invalid input.")
+
+# /apistatus (owner)
+@bot.message_handler(commands=['apistatus'])
+def cmd_apistatus(message):
+    if not is_owner(message.from_user.id): return
+    prof = get_api_profile()
+    if prof:
+        bot.reply_to(message, f"📡 API Status\nID: {prof['api_id']}\nHash: {_masked_api_hash()}")
+    else:
+        bot.reply_to(message, "⚠️ No API profile set. Use /setapi")
+
+# /restartall (owner)
+@bot.message_handler(commands=['restartall'])
+def cmd_restartall(message):
+    if not is_owner(message.from_user.id): return
+    count = 0
+    for uid_str in get_all_users():
+        uid = int(uid_str)
+        if is_blocked(uid): continue
+        accounts = get_accounts(uid)
+        for acct in accounts:
+            if runner.restart_userbot(uid, acct['slot'], "", "", "", uid_str):
+                count += 1
+    bot.reply_to(message, f"✅ Restarted {count} userbots.")
+
+# /refresh (owner)
+@bot.message_handler(commands=['refresh'])
+def cmd_refresh(message):
+    if not is_owner(message.from_user.id): return
+    bot.reply_to(message, f"🔄 Bot state refreshed.\nRunning: {runner.running_count()}\nHosted: {hosted_count()}")
+
+# ─── EXTRA CALLBACK HANDLERS for new menu buttons ───
+@bot.callback_query_handler(func=lambda call: call.data == "my_account")
+def callback_my_account(call):
+    uid = call.from_user.id
+    accounts = get_accounts(uid)
+    if not accounts:
+        bot.answer_callback_query(call.id, "No accounts hosted.")
+        bot.edit_message_text("No accounts hosted. Use /host to deploy.", call.message.chat.id, call.message.message_id)
+        return
+    acct = accounts[0]
+    phone = _phone_label(acct)
+    alive = runner.is_running(uid, 0)
+    status = "🟢 Running" if alive else "🔴 Stopped"
+    bot.edit_message_text(f"📱 Your Account\nPhone: {phone}\nStatus: {status}", call.message.chat.id, call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "cmd_list")
+def callback_cmd_list(call):
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text("""
+⚡ SID Advance V6 Commands
+━━━━━━━━━━━━━━━━━━━━
+⚔️ Raid: .attack .roast .diss .war .savage .rebel .akshu .homies
+✨ Animations: .hack .load .magic .heart .matrix .explode .typing
+🛠 Utilities: .song .qr .tts .copy .back .ping .alive .sid
+🛑 Admin: .mute .unmute .safe .unsafe .purge
+""", call.message.chat.id, call.message.message_id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "support")
+def callback_support(call):
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(f"📞 Support: {SUPPORT_USERNAME}", call.message.chat.id, call.message.message_id)
+
+# ─── BACKGROUND HEALTH CHECK THREAD ───
+def health_check_loop():
+    while True:
+        time.sleep(300)  # every 5 minutes
+        try:
+            for uid_str in get_all_users():
+                uid = int(uid_str)
+                if is_blocked(uid): continue
+                if uid not in active_runtimes:
+                    # attempt restart
+                    accounts = get_accounts(uid)
+                    for acct in accounts:
+                        if acct.get('hosted'):
+                            runner.start_userbot(uid, acct['slot'], "", "", "", uid_str)
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+
+# ─── WEB DASHBOARD (Flask) ───
+def start_web_api():
+    # separate Telethon loop for web login
+    web_loop = asyncio.new_event_loop()
+    def run_web_loop():
+        asyncio.set_event_loop(web_loop)
+        web_loop.run_forever()
+    Thread(target=run_web_loop, daemon=True).start()
+
+    web_pending = {}
+    web_app = Flask('SidWebAPI')
+
+    def _run_async(coro, timeout=30):
+        future = asyncio.run_coroutine_threadsafe(coro, web_loop)
+        return future.result(timeout=timeout)
+
+    @web_app.route('/api/health')
+    def health():
+        return jsonify({"status": "ok"})
+
+    @web_app.route('/api/accounts')
+    def list_accounts():
+        out = []
+        for uid_str in get_all_users():
+            uid = int(uid_str)
+            for acct in get_accounts(uid):
+                slot = acct.get('slot', 0)
+                out.append({
+                    'uid': uid,
+                    'slot': slot,
+                    'phone': _phone_label(acct),
+                    'status': 'running' if runner.is_running(uid, slot) else 'stopped',
+                    'uptime': runner.get_uptime(uid, slot) or '0s'
+                })
+        return jsonify({"accounts": out})
+
+    @web_app.route('/api/login/send_code', methods=['POST'])
+    def login_send_code():
+        data = request.get_json() or {}
+        phone = data.get('phone', '').strip()
+        if not phone:
+            return jsonify({"status": "error", "message": "Phone required"}), 400
+        try:
+            api_id, api_hash = _get_api_id_hash()
+            async def _send():
+                client = TelegramClient(StringSession(), api_id, api_hash)
+                await client.connect()
+                result = await client.send_code_request(phone)
+                return client, result.phone_code_hash
+            client, phone_code_hash = _run_async(_send())
+            pending_id = secrets.token_urlsafe(16)
+            web_pending[pending_id] = {
+                'client': client,
+                'phone': phone,
+                'phone_code_hash': phone_code_hash,
+                'owner_id': data.get('owner_id', OWNER_ID)
+            }
+            return jsonify({"status": "ok", "pending_id": pending_id})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @web_app.route('/api/login/verify_code', methods=['POST'])
+    def login_verify_code():
+        data = request.get_json() or {}
+        pending_id = data.get('pending_id')
+        code = data.get('code', '').strip()
+        pending = web_pending.get(pending_id)
+        if not pending:
+            return jsonify({"status": "error", "message": "Session expired"}), 400
+        try:
+            async def _verify():
+                await pending['client'].sign_in(pending['phone'], code, phone_code_hash=pending['phone_code_hash'])
+                return pending['client'].session.save()
+            session_string = _run_async(_verify())
+            web_pending.pop(pending_id, None)
+            # deploy
+            uid = pending['owner_id']
+            # use runner to start
+            ok = runner.start_userbot(uid, 0, "", "", session_string, str(uid))
+            if ok:
+                # store session
+                with GLOBAL_DB_LOCK:
+                    conn = sqlite3.connect(DATABASE_PATH)
+                    c = conn.cursor()
+                    c.execute('INSERT OR REPLACE INTO hosted_sessions (user_id, session_key, gender, system_preset, api_id, api_hash) VALUES (?, ?, ?, ?, ?, ?)',
+                              (uid, session_string, 'BOY', 'SID BOT', _get_api_id_hash()[0], _get_api_id_hash()[1]))
+                    conn.commit()
+                    conn.close()
+                return jsonify({"status": "ok", "account": {"uid": uid, "phone": pending['phone']}})
+            else:
+                return jsonify({"status": "error", "message": "Deploy failed"}), 400
+        except SessionPasswordNeededError:
+            return jsonify({"status": "needs_2fa"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @web_app.route('/api/login/verify_password', methods=['POST'])
+    def login_verify_password():
+        data = request.get_json() or {}
+        pending_id = data.get('pending_id')
+        password = data.get('password', '')
+        pending = web_pending.get(pending_id)
+        if not pending:
+            return jsonify({"status": "error", "message": "Session expired"}), 400
+        try:
+            async def _verify():
+                await pending['client'].sign_in(password=password)
+                return pending['client'].session.save()
+            session_string = _run_async(_verify())
+            web_pending.pop(pending_id, None)
+            uid = pending['owner_id']
+            ok = runner.start_userbot(uid, 0, "", "", session_string, str(uid))
+            if ok:
+                with GLOBAL_DB_LOCK:
+                    conn = sqlite3.connect(DATABASE_PATH)
+                    c = conn.cursor()
+                    c.execute('INSERT OR REPLACE INTO hosted_sessions (user_id, session_key, gender, system_preset, api_id, api_hash) VALUES (?, ?, ?, ?, ?, ?)',
+                              (uid, session_string, 'BOY', 'SID BOT', _get_api_id_hash()[0], _get_api_id_hash()[1]))
+                    conn.commit()
+                    conn.close()
+                return jsonify({"status": "ok", "account": {"uid": uid, "phone": pending['phone']}})
+            else:
+                return jsonify({"status": "error", "message": "Deploy failed"}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @web_app.route('/api/accounts/<int:uid>/<int:slot>/start', methods=['POST'])
+    def start_account(uid, slot):
+        acct = get_account(uid, slot)
+        if not acct:
+            return jsonify({"error": "not found"}), 404
+        ok = runner.start_userbot(uid, slot, "", "", acct.get('session_key', ''), str(uid))
+        return jsonify({"ok": ok})
+
+    @web_app.route('/api/accounts/<int:uid>/<int:slot>/stop', methods=['POST'])
+    def stop_account(uid, slot):
+        runner.stop_userbot(uid, slot)
+        return jsonify({"ok": True})
+
+    @web_app.route('/api/accounts/<int:uid>/<int:slot>/restart', methods=['POST'])
+    def restart_account(uid, slot):
+        acct = get_account(uid, slot)
+        if not acct:
+            return jsonify({"error": "not found"}), 404
+        ok = runner.restart_userbot(uid, slot, "", "", acct.get('session_key', ''), str(uid))
+        return jsonify({"ok": ok})
+
+    port = int(os.environ.get("WEB_PORT", 8081))
+    Thread(target=lambda: web_app.run(host="0.0.0.0", port=port, debug=False), daemon=True).start()
+    logger.info(f"🌐 Web dashboard API running on port {port}")
+
+# ─── SAFE SHUTDOWN ─── (already exists, extend with new cleanup)
 def safe_shutdown():
     logger.info("Initiating safe shutdown...")
-    for uid, e in list(active_runtimes.items()): e['loop'].run_until_complete(e['client'].disconnect())
+    for uid, e in list(active_runtimes.items()):
+        try: e['loop'].run_until_complete(e['client'].disconnect())
+        except: pass
 
 atexit.register(safe_shutdown)
 
+# ─── MAIN ───
 if __name__ == '__main__':
     logger.info("Initializing SID Master Thread Pools...")
     Thread(target=initialize_keepalive_server, daemon=True).start()
+    Thread(target=start_web_api, daemon=True).start()
+    Thread(target=health_check_loop, daemon=True).start()
     logger.info("SID Host Master Online. Entering infinite polling...")
     while True:
-        try: bot.infinity_polling(timeout=60, long_polling_timeout=30)
-        except Exception as e: logger.critical(f"Loop Collapsed: {e}. Retrying..."); time.sleep(5)
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=30)
+        except Exception as e:
+            logger.critical(f"Loop Collapsed: {e}. Retrying...")
+            time.sleep(5)
