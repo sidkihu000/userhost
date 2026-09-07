@@ -72,7 +72,7 @@ web_app = Flask('SidHostServer')
 def health_check(): return "<h3>Sid Engine Core Status: ONLINE 🟢</h3>", 200
 def initialize_keepalive_server(): web_app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
 
-BOT_TOKEN = '7096730412:AAHhv6RLDMW_WXfo2QMUuEdRRRTrAMOTsn0' 
+BOT_TOKEN = '8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY' 
 DEFAULT_API_ID = 32082988
 DEFAULT_API_HASH = "a81844a473550947cfff864a8c7489cd"
 
