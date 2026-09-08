@@ -18,14 +18,14 @@ import atexit
 import psutil
 import threading
 import random
-import shutil          # ─── NEW ADDITION ───
-import re              # ─── NEW ADDITION ───
-import secrets         # ─── NEW ADDITION ───
+import shutil
+import re
+import secrets
 from datetime import datetime
 
 import telebot
 from telebot import types
-from flask import Flask, request, jsonify    # ─── NEW ADDITION ───
+from flask import Flask, request, jsonify
 from threading import Thread
 
 # Userbot Dependencies
@@ -45,12 +45,13 @@ except ImportError:
 import telethon
 from telethon import TelegramClient, events
 from telethon.errors import (
-    SessionPasswordNeededError, PhoneCodeInvalidError, 
+    SessionPasswordNeededError, PhoneCodeInvalidError,
     PasswordHashInvalidError, PhoneCodeExpiredError, FloodWaitError
 )
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.photos import UploadProfilePhotoRequest, DeletePhotosRequest
 from telethon.tl.types import ChatAdminRights
+from telethon.sessions import StringSession
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SYSTEM LOGGING & PATHS
@@ -75,7 +76,7 @@ web_app = Flask('SidHostServer')
 def health_check(): return "<h3>Sid Engine Core Status: ONLINE 🟢</h3>", 200
 def initialize_keepalive_server(): web_app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
 
-BOT_TOKEN = '8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY' 
+BOT_TOKEN = '8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY'
 DEFAULT_API_ID = 32082988
 DEFAULT_API_HASH = "a81844a473550947cfff864a8c7489cd"
 
@@ -87,7 +88,7 @@ RAPIST_MESSAGES = [
     "Gᴜʟᴀᴍɪ ᴋʀ ——➤(🎀)", "Tᴇʀɪ Mᴀ Cʜᴜᴅɪ ——➤(🎀)", "Sᴀʟᴀᴍ Tʜᴏᴋ ——➤(🎀)", "Cʜɪɴᴀᴀʀ ——➤(🎀)",
     "Mᴀᴢᴅᴏᴏʀ ——➤(🎀)", "Hᴀᴡᴀʙᴀᴢᴢ ——➤(🎀)", "𝐃ɪᴘᴇsʜ अब्बू  ʙᴏʟ——➤(🎀)", "Tmkl ——➤(🎀)",
     "Kᴀᴍᴢᴏʀ Kᴜᴛɪʏᴀ ——➤(🎀)", "Bʜᴇᴇᴋ Mᴀɴɢ ——➤(🎀)", "RɴᴅɪMᴏɴ ——➤(🎀)", "Cʜᴜᴅᴀɪ Kɪᴅᴅᴇ ——➤(🎀)",
-    "Gʜᴀᴛɪʏᴀ Bᴇᴛᴀ ——➤(🎀)", "Tᴇʀᴀ Bᴀᴀᴘ x𝐃ɪᴘᴇsʜ ——➤(🎀)", "GAɴᴅ Mᴀʀᴀ ᴍᴜʟʟᴇ ——➤(🎀)", 
+    "Gʜᴀᴛɪʏᴀ Bᴇᴛᴀ ——➤(🎀)", "Tᴇʀᴀ Bᴀᴀᴘ x𝐃ɪᴘᴇsʜ ——➤(🎀)", "GAɴᴅ Mᴀʀᴀ ᴍᴜʟʟᴇ ——➤(🎀)",
     "Cʜᴜᴅᴇɢɪ Tᴇʀɪ MA ——➤(🎀)", "BɪᴛCʜ ——➤(🎀)", "HɪJᴅᴜSᴏɴ ——➤(🎀)", "Nᴀʟɪ Sᴀғ Kᴀʀ ᴊAᴋᴇ ——➤(🎀)",
     "GʜɪNᴏɴɪ Rɴ Dz ——➤(🎀)", "Cʜᴏᴛɪ Jᴀᴀᴛ ——➤(🎀)", "TᴇRɪ Mᴀ Kalwɪ ——➤(🎀)", "HɪJᴀB PᴇʜᴇN ——➤(🎀)", "Tᴍᴋc Mᴇ KᴏYʟA ——➤(🎀)"
 ]
@@ -127,7 +128,7 @@ DIPESH_MESSAGES = [
     "🩷🩵🤍🩶🖤❤️💚 Ye sare dill teri maa k naam beta 😂😜🔥", " Hat peche hat tera baap Rebel aya 😂😂🥴😹🤲🏻💪🏻",
     "Leave le rndyk psnd nai aya tu meko 🤢👎🏻", "Teri maa chodu 💯 if yes then reply to my message 💀💀💀💪🏻🔥💯👆🏻💔😂😂💔💔💔",
     "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
-    "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐚 😂🪄😂🪄", 
+    "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐀 😂🪄😂🪄",
     " Teri Maa Ko बाहुबली style mein chodunga 🥶💔🤪😹", "Tumhare Pitashree 𝐃ɪᴘᴇsʜ 💯🔥🗿🌙",
     " Tery behn bole fuck me 𝐃ɪᴘᴇsʜ daddy 😍🌹💋", " तेरी माँ 𝐃ɪᴘᴇsʜ पापा ki दीवानी Since 2k10 😂🖕🏻🔥", " Cover le सस्ती रंडी k काले बच्चे 🤢🤮🖕🏻🥀"
 ]
@@ -142,8 +143,8 @@ SAVAGE_LIST = ["😈 Main savage hoon — tujhe explanation nahi deta 🔥💀",
 # SECTION 4: STATE MANAGEMENT SYSTEM
 # ──────────────────────────────────────────────────────────────────────────────
 GLOBAL_DB_LOCK = threading.Lock()
-active_runtimes = {}     
-onboarding_states = {}   
+active_runtimes = {}
+onboarding_states = {}
 
 def execute_db_migration():
     with GLOBAL_DB_LOCK:
@@ -151,7 +152,6 @@ def execute_db_migration():
         cursor = conn.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS hosted_sessions
                          (user_id INTEGER PRIMARY KEY, session_key TEXT, gender TEXT, system_preset TEXT, api_id INTEGER, api_hash TEXT)''')
-        # ─── NEW ADDITION: create additional tables for extended features ───
         cursor.execute('''CREATE TABLE IF NOT EXISTS user_metadata
                          (user_id INTEGER PRIMARY KEY, first_name TEXT, joined_at INTEGER, phone TEXT)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS sudo_users
@@ -175,15 +175,15 @@ class SidAnimationLibrary:
     @staticmethod
     def play_terminal_pulse(chat_id, target_msg_id, final_message_text, markup=None):
         frames = [
-            "🟢 `[▱▱▱▱▱▱▱▱▱] Booting Sid Kernel...`", 
-            "🟡 `[▰▰▰▱▱▱▱▱▱] Injecting Modules...`", 
-            "🟠 `[▰▰▰▰▰▰▱▱▱] Bypassing Security...`", 
-            "🔴 `[▰▰▰▰▰▰▰▰▱] Establishing Uplink...`", 
+            "🟢 `[▱▱▱▱▱▱▱▱▱] Booting Sid Kernel...`",
+            "🟡 `[▰▰▰▱▱▱▱▱▱] Injecting Modules...`",
+            "🟠 `[▰▰▰▰▰▰▱▱▱] Bypassing Security...`",
+            "🔴 `[▰▰▰▰▰▰▰▰▱] Establishing Uplink...`",
             "✅ `[▰▰▰▰▰▰▰▰▰] Link Established!`"
         ]
         def pipeline():
             try:
-                for frame in frames: 
+                for frame in frames:
                     bot.edit_message_text(frame, chat_id, target_msg_id, parse_mode='Markdown')
                     time.sleep(0.6)
                 bot.edit_message_text(final_message_text, chat_id, target_msg_id, reply_markup=markup, parse_mode='Markdown')
@@ -202,13 +202,11 @@ def display_dashboard_interface(message):
         types.InlineKeyboardButton("⚡ Server Telemetry", callback_data="telemetry"),
         types.InlineKeyboardButton("🛑 Terminate Container", callback_data="terminate")
     )
-    # ─── NEW ADDITION: extra menu buttons ───
     markup.row(
         types.InlineKeyboardButton("📊 My Account", callback_data="my_account"),
         types.InlineKeyboardButton("📚 Commands", callback_data="cmd_list"),
         types.InlineKeyboardButton("📞 Support", callback_data="support")
     )
-    # Owner-only buttons ─── (will be handled in callback)
     welcome_text = f"👑 **SID PREMIUM USERBOT ARCHITECTURE** 👑\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✨ Welcome, {message.from_user.first_name}.\n\n» **Engine:** `v6.0-SID-DYNAMIC`\n» **Status:** `ONLINE & SECURE`\n\nSelect your deployment module:"
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='Markdown')
 
@@ -229,7 +227,7 @@ def process_onboarding_step(message):
     if user_id not in onboarding_states: return
 
     state = onboarding_states[user_id]
-    
+
     if state['step'] == 'PHONE_INPUT':
         state['phone'] = user_input
         progress_msg = bot.send_message(chat_id, "`⚡ Generating SID runtime...`", parse_mode='Markdown')
@@ -285,29 +283,28 @@ def finalize_and_deploy(call):
     user_id = int(target_uid_str)
     if call.from_user.id != user_id: return bot.answer_callback_query(call.id, "❌ Not your session.")
     bot.answer_callback_query(call.id)
-    
+
     state = onboarding_states.pop(user_id, None)
     if not state: return bot.send_message(call.message.chat.id, "❌ Session expired.")
-    
+
     gender = state['gender']
     preset_choice = (BOY_PRESETS if gender == "BOY" else GIRL_PRESETS)[int(index_str)]
-    
+
     client = state['client']
     stable_session = os.path.join(RUNTIMES_DIR, f"active_{user_id}")
     client.loop.run_until_complete(client.disconnect())
-    
+
     src, dest = os.path.join(RUNTIMES_DIR, f"temp_{user_id}.session"), f"{stable_session}.session"
     if os.path.exists(src):
         if os.path.exists(dest): os.remove(dest)
         os.rename(src, dest)
-        
+
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
         cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?)', (user_id, dest, gender, preset_choice, state['api_id'], state['api_hash']))
-        # ─── NEW ADDITION: store phone in user_metadata ───
         cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)', (user_id, state['phone']))
         conn.commit(); conn.close()
-        
+
     p_msg = bot.send_message(call.message.chat.id, "`Initializing...`", parse_mode='Markdown')
     s_txt = f"🚀 **SID {gender} USERBOT DEPLOYED**\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **Identity:** `{preset_choice}`\n» **Status:** `ACTIVE`\n\nSend `.sid_menu` in any chat!"
     SidAnimationLibrary.play_terminal_pulse(call.message.chat.id, p_msg.message_id, s_txt)
@@ -317,18 +314,31 @@ def finalize_and_deploy(call):
 # CORE TELETHON USERBOT ENGINE (DYNAMIC FUNCTIONS)
 # ──────────────────────────────────────────────────────────────────────────────
 def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
+    """
+    Deploys a live userbot for a given user.
+    chat_id: optional; if provided, status messages are sent to that chat.
+    """
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
         cursor.execute('SELECT session_key, api_id, api_hash FROM hosted_sessions WHERE user_id = ?', (user_id,))
         record = cursor.fetchone(); conn.close()
-    if not record: return
-    session_file_path, api_id, api_hash = record
-    
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    client = TelegramClient(session_file_path.replace(".session", ""), int(api_id), api_hash, loop=loop)
-    active_runtimes[user_id] = {'client': client, 'loop': loop, 'thread': threading.current_thread()}
-    
+    if not record:
+        if chat_id:
+            bot.send_message(chat_id, "❌ Session record not found.")
+        return
+    session_key, api_id, api_hash = record
+
+    # Determine if session_key is a file path or a string session
+    if os.path.exists(session_key):
+        # File-based session
+        session_file_base = session_key.replace(".session", "")
+        client = TelegramClient(session_file_base, int(api_id), api_hash)
+    else:
+        # String session
+        client = TelegramClient(StringSession(session_key), int(api_id), api_hash)
+
+    active_runtimes[user_id] = {'client': client, 'loop': asyncio.get_event_loop(), 'thread': threading.current_thread()}
+
     # ── ISOLATED USER STATE ──
     U_STATE = {
         'auth_users': set(), 'muted': {}, 'safe': {}, 'active_raids': {},
@@ -466,7 +476,7 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
         register_raid("war", WAR_LIST)
         register_raid("savage", SAVAGE_LIST)
         register_raid("rebel", DIPESH_MESSAGES)
-        register_raid("akshu", RAPIST_MESSAGES)
+        register_raid("sid", RAPIST_MESSAGES)          # ← renamed from "akshu" to "sid"
         register_raid("homies", HOMIES_MESSAGES)
 
         @client.on(events.NewMessage())
@@ -475,7 +485,7 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             sender = event.sender_id
             for cmd, targets in U_STATE['active_raids'].items():
                 if sender in targets:
-                    array_map = {"attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST, "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES, "akshu": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES}
+                    array_map = {"attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST, "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES, "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES}
                     try: await event.reply(random.choice(array_map[cmd]))
                     except FloodWaitError as e: await asyncio.sleep(e.seconds)
                     except: pass
@@ -555,7 +565,7 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             if tgt:
                 U_STATE['muted'][tgt] = event.chat_id
                 await _safe_edit(event, "🤫 Muted in this chat.")
-                
+
         @client.on(events.NewMessage(pattern=r"\.unmute"))
         async def sid_unmute(event):
             if not is_authorized(event): return
@@ -609,8 +619,9 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             • `.attack` / `.sattack` (Stop)
             • `.roast` / `.sroast`
             • `.rebel` / `.srebel`
-            • `.akshu` / `.sakshu`
-            
+            • `.sid` / `.ssid`          ← renamed from .akshu
+            • `.homies` / `.shomies`
+
             ✨ **ANIMATIONS & EFFECTS**
             • `.hack` (Terminal Hack)
             • `.load` (Progress Bar)
@@ -619,19 +630,19 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             • `.matrix` (Binary Code)
             • `.explode` (Bomb Effect)
             • `.typing [text]`
-            
+
             🛠 **UTILITIES**
             • `.song [name]` (YT Download)
             • `.qr [text]` (Generate QR)
             • `.tts [text]` (Voice note)
             • `.copy [reply]` / `.back` (Clone)
             • `.ping` / `.alive` / `.sid`
-            
+
             🛑 **ADMIN / CONTROL**
             • `.mute` / `.unmute`
             • `.safe` / `.unsafe`
             • `.purge` (Reply to start)
-            
+
             ===================================
             Powered by SID Core v6.0
             ==================================="""
@@ -639,9 +650,16 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
 
         await client.run_until_disconnected()
 
-    try: loop.run_until_complete(operational_lifecycle())
-    except Exception as e: logger.error(f"Context dropped: {e}")
-    finally: active_runtimes.pop(user_id, None)
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(operational_lifecycle())
+    except Exception as e:
+        logger.error(f"Context dropped: {e}")
+        if chat_id:
+            bot.send_message(chat_id, f"❌ Userbot crashed: {e}")
+    finally:
+        active_runtimes.pop(user_id, None)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SYSTEM METRICS & SHUTDOWN
@@ -703,7 +721,7 @@ def get_accounts(user_id):
             'api_id': row[3],
             'api_hash': row[4],
             'hosted': True,
-            'hosted_at': int(time.time()),  # approx
+            'hosted_at': int(time.time()),
         }]
     return []
 
@@ -881,7 +899,7 @@ class RunnerWrapper:
     @staticmethod
     def get_uptime(user_id, slot):
         if user_id in active_runtimes:
-            # approximate uptime from start_time stored in U_STATE? not accessible here.
+            # approximate uptime not stored per user; return placeholder
             return "N/A"
         return None
 
@@ -891,11 +909,7 @@ class RunnerWrapper:
 
     @staticmethod
     def start_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        # For single account, we re-use the deploy mechanism.
-        # This is called by new commands; we simply trigger a new deploy if not running.
-        if uid in active_runtimes:
-            return True
-        # fetch from db and start
+        # fetch from db and start; chat_id is None to avoid sending messages
         with GLOBAL_DB_LOCK:
             conn = sqlite3.connect(DATABASE_PATH)
             c = conn.cursor()
@@ -910,9 +924,7 @@ class RunnerWrapper:
 
     @staticmethod
     def restart_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        # stop if running, then start
         if uid in active_runtimes:
-            # disconnect
             try:
                 loop = active_runtimes[uid]['loop']
                 loop.create_task(active_runtimes[uid]['client'].disconnect())
@@ -939,7 +951,7 @@ class RunnerWrapper:
 runner = RunnerWrapper()
 
 # ─── FONT STYLES (optional for text formatting) ───
-def bold_serif(t): return t  # placeholder
+def bold_serif(t): return t
 def italic_serif(t): return t
 def sans_bold(t): return t
 def mono(t): return f"`{t}`"
@@ -1033,7 +1045,6 @@ def cmd_logout(message):
     if not accounts:
         bot.reply_to(message, "❌ No account to logout.")
         return
-    # confirm with inline keyboard
     markup = types.InlineKeyboardMarkup()
     markup.row(
         types.InlineKeyboardButton("✅ Yes, Logout", callback_data="confirm_logout"),
@@ -1046,7 +1057,6 @@ def confirm_logout(call):
     uid = call.from_user.id
     runner.stop_userbot(uid, 0)
     remove_account(uid, 0)
-    # delete session file
     session_path = os.path.join(RUNTIMES_DIR, f"active_{uid}.session")
     if os.path.exists(session_path):
         os.remove(session_path)
@@ -1229,9 +1239,8 @@ def cmd_setdp(message):
         return
     photo = message.reply_to_message.photo[-1]
     file_id = photo.file_id
-    # set bot profile photo using telebot
     try:
-        bot.set_chat_photo(photo=file_id)  # not exactly, but we can set via bot
+        bot.set_chat_photo(photo=file_id)
         bot.reply_to(message, "✅ Display photo updated.")
     except Exception as e:
         bot.reply_to(message, f"❌ Failed: {e}")
@@ -1328,7 +1337,7 @@ def callback_cmd_list(call):
     bot.edit_message_text("""
 ⚡ SID Advance V6 Commands
 ━━━━━━━━━━━━━━━━━━━━
-⚔️ Raid: .attack .roast .diss .war .savage .rebel .akshu .homies
+⚔️ Raid: .attack .roast .diss .war .savage .rebel .sid .homies
 ✨ Animations: .hack .load .magic .heart .matrix .explode .typing
 🛠 Utilities: .song .qr .tts .copy .back .ping .alive .sid
 🛑 Admin: .mute .unmute .safe .unsafe .purge
@@ -1348,7 +1357,6 @@ def health_check_loop():
                 uid = int(uid_str)
                 if is_blocked(uid): continue
                 if uid not in active_runtimes:
-                    # attempt restart
                     accounts = get_accounts(uid)
                     for acct in accounts:
                         if acct.get('hosted'):
@@ -1358,7 +1366,6 @@ def health_check_loop():
 
 # ─── WEB DASHBOARD (Flask) ───
 def start_web_api():
-    # separate Telethon loop for web login
     web_loop = asyncio.new_event_loop()
     def run_web_loop():
         asyncio.set_event_loop(web_loop)
@@ -1431,12 +1438,9 @@ def start_web_api():
                 return pending['client'].session.save()
             session_string = _run_async(_verify())
             web_pending.pop(pending_id, None)
-            # deploy
             uid = pending['owner_id']
-            # use runner to start
             ok = runner.start_userbot(uid, 0, "", "", session_string, str(uid))
             if ok:
-                # store session
                 with GLOBAL_DB_LOCK:
                     conn = sqlite3.connect(DATABASE_PATH)
                     c = conn.cursor()
@@ -1507,7 +1511,7 @@ def start_web_api():
     Thread(target=lambda: web_app.run(host="0.0.0.0", port=port, debug=False), daemon=True).start()
     logger.info(f"🌐 Web dashboard API running on port {port}")
 
-# ─── SAFE SHUTDOWN ─── (already exists, extend with new cleanup)
+# ─── SAFE SHUTDOWN ───
 def safe_shutdown():
     logger.info("Initiating safe shutdown...")
     for uid, e in list(active_runtimes.items()):
