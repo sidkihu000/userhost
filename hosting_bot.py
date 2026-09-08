@@ -191,8 +191,9 @@ class SidAnimationLibrary:
         Thread(target=pipeline, daemon=True).start()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# HOSTER DASHBOARD & OTP FLOW
+# HOSTER DASHBOARD & OTP FLOW (improved with state-based handler)
 # ──────────────────────────────────────────────────────────────────────────────
+
 @bot.message_handler(commands=['start', 'menu', 'sid'])
 def display_dashboard_interface(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
@@ -214,57 +215,71 @@ def display_dashboard_interface(message):
 def trigger_deployment(call):
     bot.answer_callback_query(call.id)
     gender_choice = "BOY" if "boy" in call.data else "GIRL"
-    onboarding_states[call.from_user.id] = {'step': 'PHONE_INPUT', 'gender': gender_choice, 'api_id': DEFAULT_API_ID, 'api_hash': DEFAULT_API_HASH, 'phone': None, 'client': None, 'phone_code_hash': None}
-    msg = bot.send_message(call.message.chat.id, f"📱 **SID {gender_choice} MODULE**\nEnter phone number with country code (e.g., `+919876543210`):", parse_mode='Markdown')
-    bot.register_next_step_handler(msg, process_onboarding_step)
+    onboarding_states[call.from_user.id] = {
+        'step': 'PHONE_INPUT',
+        'gender': gender_choice,
+        'api_id': DEFAULT_API_ID,
+        'api_hash': DEFAULT_API_HASH,
+        'phone': None,
+        'client': None,
+        'phone_code_hash': None
+    }
+    bot.send_message(call.message.chat.id, f"📱 **SID {gender_choice} MODULE**\nEnter phone number with country code (e.g., `+919876543210`):", parse_mode='Markdown')
 
-def process_onboarding_step(message):
-    user_id = message.from_user.id; chat_id = message.chat.id
-    user_input = message.text.strip() if message.text else ""
-    if user_input.lower() == '/cancel':
+@bot.message_handler(func=lambda message: message.from_user.id in onboarding_states)
+def handle_onboarding(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    text = message.text.strip() if message.text else ""
+
+    if text.lower() == '/cancel':
         onboarding_states.pop(user_id, None)
-        return bot.send_message(chat_id, "❌ Registration cancelled.")
-    if user_id not in onboarding_states: return
+        bot.send_message(chat_id, "❌ Registration cancelled.")
+        return
 
     state = onboarding_states[user_id]
 
     if state['step'] == 'PHONE_INPUT':
-        state['phone'] = user_input
+        # Save phone and send OTP
+        state['phone'] = text
         progress_msg = bot.send_message(chat_id, "`⚡ Generating SID runtime...`", parse_mode='Markdown')
-        loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
             client = TelegramClient(os.path.join(RUNTIMES_DIR, f"temp_{user_id}"), state['api_id'], state['api_hash'], loop=loop)
             loop.run_until_complete(client.connect())
             state['client'] = client
             result = loop.run_until_complete(client.send_code_request(state['phone']))
-            state['phone_code_hash'] = result.phone_code_hash; state['step'] = 'OTP_INPUT'
+            state['phone_code_hash'] = result.phone_code_hash
+            state['step'] = 'OTP_INPUT'
             bot.delete_message(chat_id, progress_msg.message_id)
-            msg = bot.send_message(chat_id, f"📥 **OTP Sent to {state['phone']}**\nEnter code (spaces allowed):", parse_mode='Markdown')
-            bot.register_next_step_handler(msg, process_onboarding_step)
+            bot.send_message(chat_id, f"📥 **OTP Sent to {state['phone']}**\nEnter code (spaces allowed):", parse_mode='Markdown')
         except Exception as e:
             bot.send_message(chat_id, f"❌ **Error:** `{e}`")
             onboarding_states.pop(user_id, None)
 
     elif state['step'] == 'OTP_INPUT':
-        clean_code = user_input.replace(" ", "")
-        client, loop = state['client'], state['client'].loop
+        clean_code = text.replace(" ", "")
+        client = state['client']
+        loop = client.loop
         asyncio.set_event_loop(loop)
         try:
             loop.run_until_complete(client.sign_in(state['phone'], code=clean_code, phone_code_hash=state['phone_code_hash']))
+            # Success → show preset selection
             select_preset_interface(chat_id, user_id)
         except SessionPasswordNeededError:
             state['step'] = 'PASSWORD_2FA_INPUT'
-            msg = bot.send_message(chat_id, "🔒 **2FA Detected**\nEnter your password:")
-            bot.register_next_step_handler(msg, process_onboarding_step)
+            bot.send_message(chat_id, "🔒 **2FA Detected**\nEnter your password:")
         except Exception as e:
             bot.send_message(chat_id, f"❌ **Fault:** `{e}`")
             onboarding_states.pop(user_id, None)
 
     elif state['step'] == 'PASSWORD_2FA_INPUT':
-        client, loop = state['client'], state['client'].loop
+        client = state['client']
+        loop = client.loop
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(client.sign_in(password=user_input))
+            loop.run_until_complete(client.sign_in(password=text))
             select_preset_interface(chat_id, user_id)
         except Exception as e:
             bot.send_message(chat_id, f"❌ **2FA Fault:** `{e}`")
@@ -274,18 +289,21 @@ def select_preset_interface(chat_id, user_id):
     gender = onboarding_states[user_id]['gender']
     presets = BOY_PRESETS if gender == "BOY" else GIRL_PRESETS
     markup = types.InlineKeyboardMarkup(row_width=1)
-    for i, p in enumerate(presets): markup.add(types.InlineKeyboardButton(f"🎭 {p}", callback_data=f"finalize_{i}_{user_id}"))
+    for i, p in enumerate(presets):
+        markup.add(types.InlineKeyboardButton(f"🎭 {p}", callback_data=f"finalize_{i}_{user_id}"))
     bot.send_message(chat_id, f"✅ **Authentication Successful!**\nChoose your personality:", reply_markup=markup, parse_mode='Markdown')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("finalize_"))
 def finalize_and_deploy(call):
     _, index_str, target_uid_str = call.data.split("_")
     user_id = int(target_uid_str)
-    if call.from_user.id != user_id: return bot.answer_callback_query(call.id, "❌ Not your session.")
+    if call.from_user.id != user_id:
+        return bot.answer_callback_query(call.id, "❌ Not your session.")
     bot.answer_callback_query(call.id)
 
     state = onboarding_states.pop(user_id, None)
-    if not state: return bot.send_message(call.message.chat.id, "❌ Session expired.")
+    if not state:
+        return bot.send_message(call.message.chat.id, "❌ Session expired.")
 
     gender = state['gender']
     preset_choice = (BOY_PRESETS if gender == "BOY" else GIRL_PRESETS)[int(index_str)]
@@ -296,14 +314,19 @@ def finalize_and_deploy(call):
 
     src, dest = os.path.join(RUNTIMES_DIR, f"temp_{user_id}.session"), f"{stable_session}.session"
     if os.path.exists(src):
-        if os.path.exists(dest): os.remove(dest)
+        if os.path.exists(dest):
+            os.remove(dest)
         os.rename(src, dest)
 
     with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
-        cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?)', (user_id, dest, gender, preset_choice, state['api_id'], state['api_hash']))
-        cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)', (user_id, state['phone']))
-        conn.commit(); conn.close()
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+        cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?)',
+                       (user_id, dest, gender, preset_choice, state['api_id'], state['api_hash']))
+        cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)',
+                       (user_id, state['phone']))
+        conn.commit()
+        conn.close()
 
     p_msg = bot.send_message(call.message.chat.id, "`Initializing...`", parse_mode='Markdown')
     s_txt = f"🚀 **SID {gender} USERBOT DEPLOYED**\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **Identity:** `{preset_choice}`\n» **Status:** `ACTIVE`\n\nSend `.sid_menu` in any chat!"
@@ -330,11 +353,9 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
 
     # Determine if session_key is a file path or a string session
     if os.path.exists(session_key):
-        # File-based session
         session_file_base = session_key.replace(".session", "")
         client = TelegramClient(session_file_base, int(api_id), api_hash)
     else:
-        # String session
         client = TelegramClient(StringSession(session_key), int(api_id), api_hash)
 
     active_runtimes[user_id] = {'client': client, 'loop': asyncio.get_event_loop(), 'thread': threading.current_thread()}
@@ -347,17 +368,23 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
     }
 
     async def _safe_edit(event, text):
-        if event.out: return await event.edit(text)
+        if event.out:
+            return await event.edit(text)
         elif event.sender_id in U_STATE['auth_users']:
-            try: await event.delete()
-            except: pass
+            try:
+                await event.delete()
+            except:
+                pass
             return await client.send_message(event.chat_id, text, reply_to=event.reply_to_msg_id)
 
     async def get_target(event, arg):
-        if event.is_reply: return (await event.get_reply_message()).sender_id
+        if event.is_reply:
+            return (await event.get_reply_message()).sender_id
         if arg:
-            try: return (await client.get_entity(arg)).id
-            except: pass
+            try:
+                return (await client.get_entity(arg)).id
+            except:
+                pass
         return None
 
     def is_authorized(event):
@@ -365,8 +392,11 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
 
     async def operational_lifecycle():
         await client.connect()
-        try: await client(UpdateProfileRequest(first_name=preset_string.split()[0], about=f"Powered by SID Master Engine 👑 • {preset_string}"))
-        except: pass
+        try:
+            await client(UpdateProfileRequest(first_name=preset_string.split()[0],
+                                              about=f"Powered by SID Master Engine 👑 • {preset_string}"))
+        except:
+            pass
 
         # ── 1. DYNAMIC EFFECTS & ANIMATIONS ──
         @client.on(events.NewMessage(pattern=r"\.hack", outgoing=True))
@@ -426,7 +456,8 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
         @client.on(events.NewMessage(pattern=r"\.typing", outgoing=True))
         async def sid_typing(event):
             txt = event.raw_text.replace(".typing", "").strip()
-            if not txt: return await event.edit("❌ Provide text.")
+            if not txt:
+                return await event.edit("❌ Provide text.")
             current = ""
             for char in txt:
                 current += char
@@ -450,24 +481,31 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             start = time.time()
             await event.edit("⚡ `Pinging...`")
             ms = round((time.time() - start) * 1000, 2)
-            if gender == "BOY": await event.edit(f"😈 **SID NETWORK SPEED**\n» `{ms} ms` - *Too fast for you.*")
-            else: await event.edit(f"🎀 **SID NETWORK SPEED**\n» `{ms} ms` - *Lightning fast bestie!* ✨")
+            if gender == "BOY":
+                await event.edit(f"😈 **SID NETWORK SPEED**\n» `{ms} ms` - *Too fast for you.*")
+            else:
+                await event.edit(f"🎀 **SID NETWORK SPEED**\n» `{ms} ms` - *Lightning fast bestie!* ✨")
 
         # ── 3. RAID COMMANDS ──
         def register_raid(cmd, text_array):
             @client.on(events.NewMessage(pattern=rf"\.{cmd}"))
             async def start_raid(event):
-                if not is_authorized(event): return
+                if not is_authorized(event):
+                    return
                 tgt = await get_target(event, event.raw_text.split(" ", 1)[1] if len(event.raw_text.split())>1 else "")
-                if not tgt: return await _safe_edit(event, "❌ Reply to a user.")
-                if cmd not in U_STATE['active_raids']: U_STATE['active_raids'][cmd] = set()
+                if not tgt:
+                    return await _safe_edit(event, "❌ Reply to a user.")
+                if cmd not in U_STATE['active_raids']:
+                    U_STATE['active_raids'][cmd] = set()
                 U_STATE['active_raids'][cmd].add(tgt)
                 await _safe_edit(event, f"🔥 **{cmd.upper()} RAID ON** → `{tgt}`")
 
             @client.on(events.NewMessage(pattern=rf"\.s{cmd}"))
             async def stop_raid(event):
-                if not is_authorized(event): return
-                if cmd in U_STATE['active_raids']: U_STATE['active_raids'][cmd].clear()
+                if not is_authorized(event):
+                    return
+                if cmd in U_STATE['active_raids']:
+                    U_STATE['active_raids'][cmd].clear()
                 await _safe_edit(event, f"🛑 **{cmd.upper()} RAID OFF**")
 
         register_raid("attack", ATTACK_LIST)
@@ -476,61 +514,92 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
         register_raid("war", WAR_LIST)
         register_raid("savage", SAVAGE_LIST)
         register_raid("rebel", DIPESH_MESSAGES)
-        register_raid("sid", RAPIST_MESSAGES)          # ← renamed from "akshu" to "sid"
+        register_raid("sid", RAPIST_MESSAGES)       # renamed from akshu
         register_raid("homies", HOMIES_MESSAGES)
 
         @client.on(events.NewMessage())
         async def raid_trigger(event):
-            if event.out: return
+            if event.out:
+                return
             sender = event.sender_id
             for cmd, targets in U_STATE['active_raids'].items():
                 if sender in targets:
-                    array_map = {"attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST, "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES, "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES}
-                    try: await event.reply(random.choice(array_map[cmd]))
-                    except FloodWaitError as e: await asyncio.sleep(e.seconds)
-                    except: pass
+                    array_map = {
+                        "attack": ATTACK_LIST,
+                        "roast": ROAST_LIST,
+                        "diss": DISS_LIST,
+                        "war": WAR_LIST,
+                        "savage": SAVAGE_LIST,
+                        "rebel": DIPESH_MESSAGES,
+                        "sid": RAPIST_MESSAGES,
+                        "homies": HOMIES_MESSAGES
+                    }
+                    try:
+                        await event.reply(random.choice(array_map[cmd]))
+                    except FloodWaitError as e:
+                        await asyncio.sleep(e.seconds)
+                    except:
+                        pass
 
         # ── 4. UTILITIES (Music, QR, TTS, Clone) ──
         @client.on(events.NewMessage(pattern=r"\.song", outgoing=True))
         async def sid_song(event):
             song_name = event.raw_text.replace(".song", "").strip()
-            if not song_name: return await _safe_edit(event, "❌ Provide a song name")
+            if not song_name:
+                return await _safe_edit(event, "❌ Provide a song name")
             await _safe_edit(event, f"🎵 Downloading: `{song_name}`...")
             file_base = f"sid_song_{event.id}"
-            opts = {'format': 'bestaudio/best', 'outtmpl': f'{file_base}.%(ext)s', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}], 'quiet': True, 'default_search': 'ytsearch1'}
+            opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': f'{file_base}.%(ext)s',
+                'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
+                'quiet': True,
+                'default_search': 'ytsearch1'
+            }
             try:
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     ydl.extract_info(song_name, download=True)
                     if os.path.exists(f"{file_base}.mp3"):
                         await client.send_file(event.chat_id, f"{file_base}.mp3", reply_to=event.reply_to_msg_id)
                         os.remove(f"{file_base}.mp3")
-                        try: await event.delete()
-                        except: pass
-                    else: await _safe_edit(event, "❌ Failed.")
-            except Exception as e: await _safe_edit(event, f"❌ Error: {e}")
+                        try:
+                            await event.delete()
+                        except:
+                            pass
+                    else:
+                        await _safe_edit(event, "❌ Failed.")
+            except Exception as e:
+                await _safe_edit(event, f"❌ Error: {e}")
 
         @client.on(events.NewMessage(pattern=r"\.qr", outgoing=True))
         async def sid_qr(event):
             txt = event.raw_text.replace(".qr", "").strip()
-            if not txt: return await _safe_edit(event, "❌ Provide text.")
+            if not txt:
+                return await _safe_edit(event, "❌ Provide text.")
             await _safe_edit(event, "⚡ Generating QR...")
             f = f"qr_{event.id}.png"
             qrcode.make(txt).save(f)
-            await client.send_file(event.chat_id, f, caption="🔳 QR Code"); os.remove(f); await event.delete()
+            await client.send_file(event.chat_id, f, caption="🔳 QR Code")
+            os.remove(f)
+            await event.delete()
 
         @client.on(events.NewMessage(pattern=r"\.tts", outgoing=True))
         async def sid_tts(event):
             txt = event.raw_text.replace(".tts", "").strip()
-            if not txt: return await _safe_edit(event, "❌ Provide text.")
+            if not txt:
+                return await _safe_edit(event, "❌ Provide text.")
             await _safe_edit(event, "🗣️ Generating TTS...")
             f = f"tts_{event.id}.mp3"
             gTTS(text=txt, lang="hi").save(f)
-            await client.send_file(event.chat_id, f, voice_note=True); os.remove(f); await event.delete()
+            await client.send_file(event.chat_id, f, voice_note=True)
+            os.remove(f)
+            await event.delete()
 
         @client.on(events.NewMessage(pattern=r"\.copy", outgoing=True))
         async def sid_copy(event):
             tgt = await get_target(event, event.raw_text.replace(".copy", "").strip())
-            if not tgt: return await _safe_edit(event, "❌ Provide target.")
+            if not tgt:
+                return await _safe_edit(event, "❌ Provide target.")
             await _safe_edit(event, "🔄 Cloning Profile...")
             try:
                 target_ent = await client.get_entity(tgt)
@@ -538,29 +607,36 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
                 if not U_STATE['original_profile']:
                     U_STATE['original_profile']['first'] = me.first_name or ""
                     U_STATE['original_profile']['last'] = me.last_name or ""
-                await client(UpdateProfileRequest(first_name=target_ent.first_name or "", last_name=target_ent.last_name or ""))
+                await client(UpdateProfileRequest(first_name=target_ent.first_name or "",
+                                                  last_name=target_ent.last_name or ""))
                 ph = await client.download_profile_photo(target_ent)
                 if ph:
                     my_ph = await client.get_profile_photos('me')
-                    if my_ph: await client(DeletePhotosRequest(id=[p for p in my_ph]))
+                    if my_ph:
+                        await client(DeletePhotosRequest(id=[p for p in my_ph]))
                     await client(UploadProfilePhotoRequest(file=await client.upload_file(ph)))
                     os.remove(ph)
                 await _safe_edit(event, f"🎭 Identity theft successful. Now acting as {target_ent.first_name}")
-            except Exception as e: await _safe_edit(event, f"❌ Error: {e}")
+            except Exception as e:
+                await _safe_edit(event, f"❌ Error: {e}")
 
         @client.on(events.NewMessage(pattern=r"\.back", outgoing=True))
         async def sid_back(event):
-            if not U_STATE['original_profile']: return await _safe_edit(event, "❌ No backup found.")
+            if not U_STATE['original_profile']:
+                return await _safe_edit(event, "❌ No backup found.")
             await _safe_edit(event, "🔄 Reverting...")
             try:
-                await client(UpdateProfileRequest(first_name=U_STATE['original_profile']['first'], last_name=U_STATE['original_profile']['last']))
+                await client(UpdateProfileRequest(first_name=U_STATE['original_profile']['first'],
+                                                  last_name=U_STATE['original_profile']['last']))
                 await _safe_edit(event, "✅ Original Profile Restored!")
-            except Exception as e: await _safe_edit(event, f"❌ Error: {e}")
+            except Exception as e:
+                await _safe_edit(event, f"❌ Error: {e}")
 
         # ── 5. ADMIN, MUTE & PROTECT ──
         @client.on(events.NewMessage(pattern=r"\.mute"))
         async def sid_mute(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             tgt = await get_target(event, event.raw_text.replace(".mute", "").strip())
             if tgt:
                 U_STATE['muted'][tgt] = event.chat_id
@@ -568,7 +644,8 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
 
         @client.on(events.NewMessage(pattern=r"\.unmute"))
         async def sid_unmute(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             tgt = await get_target(event, event.raw_text.replace(".unmute", "").strip())
             if tgt in U_STATE['muted']:
                 del U_STATE['muted'][tgt]
@@ -577,21 +654,26 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
         @client.on(events.NewMessage())
         async def enforce_mute(event):
             if event.sender_id in U_STATE['muted'] and event.chat_id == U_STATE['muted'][event.sender_id]:
-                try: await event.delete()
-                except: pass
+                try:
+                    await event.delete()
+                except:
+                    pass
 
         @client.on(events.NewMessage(pattern=r"\.safe"))
         async def sid_safe(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             tgt = await get_target(event, event.raw_text.replace(".safe", "").strip())
             if tgt:
-                if event.chat_id not in U_STATE['safe']: U_STATE['safe'][event.chat_id] = set()
+                if event.chat_id not in U_STATE['safe']:
+                    U_STATE['safe'][event.chat_id] = set()
                 U_STATE['safe'][event.chat_id].add(tgt)
                 await _safe_edit(event, "🛡 User is safe from deletion.")
 
         @client.on(events.NewMessage(pattern=r"\.unsafe"))
         async def sid_unsafe(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             tgt = await get_target(event, event.raw_text.replace(".unsafe", "").strip())
             if tgt and event.chat_id in U_STATE['safe'] and tgt in U_STATE['safe'][event.chat_id]:
                 U_STATE['safe'][event.chat_id].discard(tgt)
@@ -599,18 +681,22 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
 
         @client.on(events.NewMessage(pattern=r"\.purge"))
         async def sid_purge(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             if event.is_reply:
                 msgs = [m.id async for m in client.iter_messages(event.chat_id, min_id=event.reply_to_msg_id - 1)]
                 if msgs:
-                    for i in range(0, len(msgs), 100): await client.delete_messages(event.chat_id, msgs[i:i+100])
+                    for i in range(0, len(msgs), 100):
+                        await client.delete_messages(event.chat_id, msgs[i:i+100])
                     x = await client.send_message(event.chat_id, f"🗑️ Purged {len(msgs)-1} messages.")
-                    await asyncio.sleep(2); await x.delete()
+                    await asyncio.sleep(2)
+                    await x.delete()
 
         # ── 6. MENU ──
         @client.on(events.NewMessage(pattern=r"\.sid_menu|\.menu"))
         async def sid_menu(event):
-            if not is_authorized(event): return
+            if not is_authorized(event):
+                return
             MENU = f"""
             ===================================
                      {gender} SID MASTER MENU 👑
@@ -675,20 +761,19 @@ def terminate_worker(call):
     if user_id in active_runtimes:
         active_runtimes[user_id]['loop'].create_task(active_runtimes[user_id]['client'].disconnect())
         bot.answer_callback_query(call.id, "🛑 SID Container Terminated Successfully.", show_alert=True)
-    else: bot.answer_callback_query(call.id, "❌ No active runtimes detected.", show_alert=True)
+    else:
+        bot.answer_callback_query(call.id, "❌ No active runtimes detected.", show_alert=True)
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ─── NEW ADDITIONS FROM SECOND FILE (merged without modifying existing code) ───
+# ─── ADDITIONS FOR OWNER, SUDO, BLOCK, ETC. ───
 # ════════════════════════════════════════════════════════════════════════════════
 
-# ─── NEW CONSTANTS ───
 OWNER_ID = 123456789  # ← REPLACE WITH YOUR OWNER TELEGRAM ID
 SUPPORT_USERNAME = "@YourSupport"  # ← REPLACE
 MAX_ACCOUNTS_PER_USER = 3
 MAX_USERBOTS = 50
 START_TIME = time.time()
 
-# ─── NEW HELPER FUNCTIONS ───
 def is_owner(user_id):
     return user_id == OWNER_ID
 
@@ -705,7 +790,6 @@ def db_is_sudo(user_id):
         return res
 
 def get_accounts(user_id):
-    """Return list of hosted accounts for a user (single account in this implementation)."""
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
@@ -890,7 +974,7 @@ def _masked_api_hash():
 def _api_ready():
     return get_api_profile() is not None
 
-# ─── RUNNER WRAPPER for telebot compatibility ───
+# ─── RUNNER WRAPPER ───
 class RunnerWrapper:
     @staticmethod
     def is_running(user_id, slot):
@@ -899,7 +983,6 @@ class RunnerWrapper:
     @staticmethod
     def get_uptime(user_id, slot):
         if user_id in active_runtimes:
-            # approximate uptime not stored per user; return placeholder
             return "N/A"
         return None
 
@@ -909,7 +992,6 @@ class RunnerWrapper:
 
     @staticmethod
     def start_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        # fetch from db and start; chat_id is None to avoid sending messages
         with GLOBAL_DB_LOCK:
             conn = sqlite3.connect(DATABASE_PATH)
             c = conn.cursor()
@@ -950,27 +1032,12 @@ class RunnerWrapper:
 
 runner = RunnerWrapper()
 
-# ─── FONT STYLES (optional for text formatting) ───
-def bold_serif(t): return t
-def italic_serif(t): return t
-def sans_bold(t): return t
-def mono(t): return f"`{t}`"
-def double_struck(t): return t
-def script(t): return t
-def fraktur(t): return t
-def bold_italic_serif(t): return t
-
-DIV = "━━━━━━━━━━━━━━━━━━━━━━━━━━"
-TOP = "╔══════════════════════════╗"
-BOT = "╚══════════════════════════╝"
-
 def uptime_str():
     e = int(time.time() - START_TIME)
     h, r = divmod(e, 3600); m, s = divmod(r, 60)
     return f"{h}h {m}m {s}s"
 
 def _phone_label(acct):
-    # try to get phone from user_metadata
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
@@ -979,9 +1046,7 @@ def _phone_label(acct):
         conn.close()
     return row[0] if row else "Unknown"
 
-# ─── NEW BOT COMMAND HANDLERS ───
-
-# /myaccounts
+# ─── BOT COMMANDS (owner, user, etc.) ───
 @bot.message_handler(commands=['myaccounts'])
 def cmd_myaccounts(message):
     uid = message.from_user.id
@@ -995,15 +1060,15 @@ def cmd_myaccounts(message):
     for acct in accounts:
         slot = acct['slot']
         alive = runner.is_running(uid, slot)
-        phone = _phone_label(acct) if acct else "Unknown"
+        phone = _phone_label(acct)
         status = "🟢 Running" if alive else "🔴 Stopped"
         bot.reply_to(message, f"📱 Account #{slot+1}\nPhone: {phone}\nStatus: {status}")
 
-# /status
 @bot.message_handler(commands=['status'])
 def cmd_status(message):
     uid = message.from_user.id
-    if is_blocked(uid): return
+    if is_blocked(uid):
+        return
     accounts = get_accounts(uid)
     if not accounts:
         bot.reply_to(message, "❌ No userbot found.")
@@ -1018,11 +1083,11 @@ def cmd_status(message):
         lines.append(f"{icon} Account #{slot+1} — {phone}\n   Uptime: {uptime}")
     bot.reply_to(message, "📊 Userbot Status\n\n" + "\n\n".join(lines))
 
-# /restart
 @bot.message_handler(commands=['restart'])
 def cmd_restart(message):
     uid = message.from_user.id
-    if is_blocked(uid): return
+    if is_blocked(uid):
+        return
     accounts = get_accounts(uid)
     if not accounts:
         bot.reply_to(message, "❌ No userbot to restart.")
@@ -1036,11 +1101,11 @@ def cmd_restart(message):
     else:
         bot.edit_message_text("❌ Restart failed.", msg.chat.id, msg.message_id)
 
-# /logout
 @bot.message_handler(commands=['logout'])
 def cmd_logout(message):
     uid = message.from_user.id
-    if is_blocked(uid): return
+    if is_blocked(uid):
+        return
     accounts = get_accounts(uid)
     if not accounts:
         bot.reply_to(message, "❌ No account to logout.")
@@ -1068,12 +1133,10 @@ def cancel_logout(call):
     bot.answer_callback_query(call.id, "Logout cancelled.")
     bot.edit_message_text("Logout cancelled.", call.message.chat.id, call.message.message_id)
 
-# /support
 @bot.message_handler(commands=['support'])
 def cmd_support(message):
     bot.reply_to(message, f"📞 Support: {SUPPORT_USERNAME}\nFor help, use /help or contact admin.")
 
-# /help
 @bot.message_handler(commands=['help'])
 def cmd_help(message):
     text = """
@@ -1090,7 +1153,6 @@ def cmd_help(message):
     """
     bot.reply_to(message, text)
 
-# /stats (owner)
 @bot.message_handler(commands=['stats'])
 def cmd_stats(message):
     if not is_owner(message.from_user.id):
@@ -1113,10 +1175,10 @@ def cmd_stats(message):
 🕒 Uptime: {uptime_str()}
     """)
 
-# /broadcast (owner)
 @bot.message_handler(commands=['broadcast'])
 def cmd_broadcast(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     if not message.reply_to_message and not message.text.replace('/broadcast','').strip():
         bot.reply_to(message, "Reply to a message or provide text: /broadcast Hello")
         return
@@ -1129,7 +1191,8 @@ def cmd_broadcast(message):
     for uid_str in users:
         try:
             uid = int(uid_str)
-            if is_blocked(uid): continue
+            if is_blocked(uid):
+                continue
             if message.reply_to_message:
                 bot.copy_message(uid, message.chat.id, message.reply_to_message.message_id)
             else:
@@ -1139,10 +1202,10 @@ def cmd_broadcast(message):
             failed += 1
     bot.reply_to(message, f"✅ Broadcast sent to {sent} users. Failed: {failed}")
 
-# /sudolist (owner)
 @bot.message_handler(commands=['sudolist'])
 def cmd_sudolist(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     args = message.text.split()
     if len(args) >= 3 and args[1] == 'add':
         try:
@@ -1166,10 +1229,10 @@ def cmd_sudolist(message):
     else:
         bot.reply_to(message, "👑 Sudo Users:\n" + "\n".join(str(u) for u in sudos))
 
-# /block (owner)
 @bot.message_handler(commands=['block'])
 def cmd_block(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     args = message.text.split()
     if len(args) < 2:
         bot.reply_to(message, "Usage: /block <user_id>")
@@ -1185,10 +1248,10 @@ def cmd_block(message):
     except:
         bot.reply_to(message, "Invalid ID.")
 
-# /unblock (owner)
 @bot.message_handler(commands=['unblock'])
 def cmd_unblock(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     args = message.text.split()
     if len(args) < 2:
         bot.reply_to(message, "Usage: /unblock <user_id>")
@@ -1200,20 +1263,20 @@ def cmd_unblock(message):
     except:
         bot.reply_to(message, "Invalid ID.")
 
-# /blockeduser (owner)
 @bot.message_handler(commands=['blockeduser'])
 def cmd_blockeduser(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     blocked = get_blocked()
     if not blocked:
         bot.reply_to(message, "No blocked users.")
     else:
         bot.reply_to(message, "🚫 Blocked users:\n" + "\n".join(str(u) for u in blocked))
 
-# /secretfunction (owner)
 @bot.message_handler(commands=['secretfunction'])
 def cmd_secretfunction(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     bot.reply_to(message, """
 🔐 Secret Commands
 ━━━━━━━━━━━━━━━━━━━━
@@ -1230,10 +1293,10 @@ def cmd_secretfunction(message):
 🔹 /removewelcomevideo
     """)
 
-# /setdp (owner)
 @bot.message_handler(commands=['setdp'])
 def cmd_setdp(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     if not message.reply_to_message or not message.reply_to_message.photo:
         bot.reply_to(message, "Reply to a photo with /setdp")
         return
@@ -1245,10 +1308,10 @@ def cmd_setdp(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Failed: {e}")
 
-# /setwelcomevideo (owner)
 @bot.message_handler(commands=['setwelcomevideo'])
 def cmd_setwelcomevideo(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     if not message.reply_to_message:
         bot.reply_to(message, "Reply to a video or video note.")
         return
@@ -1263,17 +1326,17 @@ def cmd_setwelcomevideo(message):
     else:
         bot.reply_to(message, "Reply must be video or video note.")
 
-# /removewelcomevideo (owner)
 @bot.message_handler(commands=['removewelcomevideo'])
 def cmd_removewelcomevideo(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     remove_welcome_video()
     bot.reply_to(message, "🗑️ Welcome video removed.")
 
-# /setapi (owner) – store API ID/Hash
 @bot.message_handler(commands=['setapi'])
 def cmd_setapi(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     args = message.text.split()
     if len(args) < 3:
         bot.reply_to(message, "Usage: /setapi <api_id> <api_hash>")
@@ -1286,37 +1349,38 @@ def cmd_setapi(message):
     except:
         bot.reply_to(message, "❌ Invalid input.")
 
-# /apistatus (owner)
 @bot.message_handler(commands=['apistatus'])
 def cmd_apistatus(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     prof = get_api_profile()
     if prof:
         bot.reply_to(message, f"📡 API Status\nID: {prof['api_id']}\nHash: {_masked_api_hash()}")
     else:
         bot.reply_to(message, "⚠️ No API profile set. Use /setapi")
 
-# /restartall (owner)
 @bot.message_handler(commands=['restartall'])
 def cmd_restartall(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     count = 0
     for uid_str in get_all_users():
         uid = int(uid_str)
-        if is_blocked(uid): continue
+        if is_blocked(uid):
+            continue
         accounts = get_accounts(uid)
         for acct in accounts:
             if runner.restart_userbot(uid, acct['slot'], "", "", "", uid_str):
                 count += 1
     bot.reply_to(message, f"✅ Restarted {count} userbots.")
 
-# /refresh (owner)
 @bot.message_handler(commands=['refresh'])
 def cmd_refresh(message):
-    if not is_owner(message.from_user.id): return
+    if not is_owner(message.from_user.id):
+        return
     bot.reply_to(message, f"🔄 Bot state refreshed.\nRunning: {runner.running_count()}\nHosted: {hosted_count()}")
 
-# ─── EXTRA CALLBACK HANDLERS for new menu buttons ───
+# ─── EXTRA CALLBACKS ───
 @bot.callback_query_handler(func=lambda call: call.data == "my_account")
 def callback_my_account(call):
     uid = call.from_user.id
@@ -1348,14 +1412,15 @@ def callback_support(call):
     bot.answer_callback_query(call.id)
     bot.edit_message_text(f"📞 Support: {SUPPORT_USERNAME}", call.message.chat.id, call.message.message_id)
 
-# ─── BACKGROUND HEALTH CHECK THREAD ───
+# ─── HEALTH CHECK ───
 def health_check_loop():
     while True:
-        time.sleep(300)  # every 5 minutes
+        time.sleep(300)
         try:
             for uid_str in get_all_users():
                 uid = int(uid_str)
-                if is_blocked(uid): continue
+                if is_blocked(uid):
+                    continue
                 if uid not in active_runtimes:
                     accounts = get_accounts(uid)
                     for acct in accounts:
@@ -1364,7 +1429,7 @@ def health_check_loop():
         except Exception as e:
             logger.error(f"Health check error: {e}")
 
-# ─── WEB DASHBOARD (Flask) ───
+# ─── WEB API ───
 def start_web_api():
     web_loop = asyncio.new_event_loop()
     def run_web_loop():
@@ -1515,8 +1580,10 @@ def start_web_api():
 def safe_shutdown():
     logger.info("Initiating safe shutdown...")
     for uid, e in list(active_runtimes.items()):
-        try: e['loop'].run_until_complete(e['client'].disconnect())
-        except: pass
+        try:
+            e['loop'].run_until_complete(e['client'].disconnect())
+        except:
+            pass
 
 atexit.register(safe_shutdown)
 
