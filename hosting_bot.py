@@ -5,6 +5,7 @@
 ================================━━━━━━━━================================
 Core Architecture: pyTelegramBotAPI (Hoster) + Telethon (Live Runtimes)
 Features: OTP/2FA, Dynamic Animations, Spam Commands, Full Raid Integrated
+Multi-Account Support with Slots, Performance Optimizations
 """
 
 import os
@@ -104,13 +105,13 @@ HOMIES_MESSAGES = [
 DIPESH_MESSAGES = [
     "Teri ma Kali randy 💔🦋", "Chal Ma Chuda mere se 🖕", "Chal 𝐃ɪᴘᴇsʜ ko Baap Bol",
     "Teri ma mar du randyke 😂🦋", "KHAKE BURGUR TERI MA CHODU GHAR GHAR", "BAAP BOL MUJHE GAREEB",
-    "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝒆𝒉𝒆😂",
+    "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝑒𝒉𝑒😂",
     "Tᴇʀᴀ ʙᴀᴀᴘ Sᴛᴀᴛɪᴏɴ Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵𝘪𝘺𝘢 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
     "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂𝒏𝒈𝒊 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
-    "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜE MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ TᴇRɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
-    "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ TᴇRɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
+    "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜᴇ MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ Tᴇʀɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
+    "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ Tᴇʀɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
     "Teri Maa Ke भोसड़े में Theater Kholke सैयारा चाला दूंगा 🔈🔈🔥🔥🔥🔥😂😂😂🔈🔈🔈",
-    "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱᵏʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ TᴇRɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
+    "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱᵏʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ Tᴇʀɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
     "𝐓𝐔 𝐈𝐃𝐑 𝐂𝐎𝐌𝐄𝐁𝐀𝐂𝐊 𝐃𝐄𝐓𝐀 𝐑𝐄𝐇 𝐆𝐘𝐀 𝐔𝐃𝐇𝐑 𝐃ɪᴘᴇsʜ 𝐓ᴇʀ𝐈 𝐌ᴀA 𝐂ʜᴏᴅ 𝐆ʏA 🩷🩶🩵", "Choding ho rhi hai teri maa ki 😬👨🏻‍💻🔥",
     "Teri Maa Ki Chut Mein Loda Daluga Beta 🥵💯", "🧐 Teri maa ka bh🤪sda dikh rha hai 😎",
     " 😉🔥 Cya 😉🔥 re 😉 🔥 sapri 😉🔥 try 😉🔥 maa 😉🔥 tujh 😉🔥 nehlati 😉🔥 ny 😉🔥 ey 😉🔥 Cya 😉🔥",
@@ -143,17 +144,20 @@ SAVAGE_LIST = ["😈 Main savage hoon — tujhe explanation nahi deta 🔥💀",
 # SECTION 4: STATE MANAGEMENT SYSTEM
 # ──────────────────────────────────────────────────────────────────────────────
 GLOBAL_DB_LOCK = threading.Lock()
-active_runtimes = {}
-onboarding_states = {}
+active_runtimes = {}          # key: (user_id, slot)
+onboarding_states = {}        # key: user_id, state includes 'slot'
 
 def execute_db_migration():
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
+        # hosted_sessions now uses composite primary key (user_id, slot)
         cursor.execute('''CREATE TABLE IF NOT EXISTS hosted_sessions
-                          (user_id INTEGER PRIMARY KEY, session_key TEXT, gender TEXT, system_preset TEXT, api_id INTEGER, api_hash TEXT)''')
+                          (user_id INTEGER, slot INTEGER, session_key TEXT, gender TEXT, system_preset TEXT, api_id INTEGER, api_hash TEXT,
+                           PRIMARY KEY (user_id, slot))''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS user_metadata
-                          (user_id INTEGER PRIMARY KEY, first_name TEXT, joined_at INTEGER, phone TEXT)''')
+                          (user_id INTEGER, first_name TEXT, joined_at INTEGER, phone TEXT,
+                           PRIMARY KEY (user_id, phone))''')  # phone can be different per slot? but we'll keep as before
         cursor.execute('''CREATE TABLE IF NOT EXISTS sudo_users
                           (user_id INTEGER PRIMARY KEY)''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS blocked_users
@@ -191,7 +195,7 @@ class SidAnimationLibrary:
         Thread(target=pipeline, daemon=True).start()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# HOSTER DASHBOARD & OTP FLOW (Robust Sequential Flow)
+# HOSTER DASHBOARD & OTP FLOW (Multi‑slot support)
 # ──────────────────────────────────────────────────────────────────────────────
 
 @bot.message_handler(commands=['start', 'menu', 'sid', 'host'])
@@ -217,16 +221,18 @@ def display_dashboard_interface(message):
 def trigger_deployment(call):
     bot.answer_callback_query(call.id)
     gender_choice = "BOY" if "boy" in call.data else "GIRL"
+    # Step 0: ask for slot number
     onboarding_states[call.from_user.id] = {
-        'step': 'PHONE_INPUT',
+        'step': 'SLOT_INPUT',
         'gender': gender_choice,
         'api_id': DEFAULT_API_ID,
         'api_hash': DEFAULT_API_HASH,
+        'slot': None,
         'phone': None,
         'client': None,
         'phone_code_hash': None
     }
-    bot.send_message(call.message.chat.id, f"📱 **STEP 1: SID {gender_choice} MODULE**\n\n✨ Enter your phone number with country code (e.g., `+919876543210`):", parse_mode='Markdown')
+    bot.send_message(call.message.chat.id, f"📋 **SLOT SELECTION**\n\nEnter a slot number between 1 and 5 to host this userbot:\n(Slot 1-5, each can hold a separate account)", parse_mode='Markdown')
 
 @bot.message_handler(func=lambda message: message.from_user.id in onboarding_states)
 def handle_onboarding(message):
@@ -241,13 +247,35 @@ def handle_onboarding(message):
 
     state = onboarding_states[user_id]
 
-    if state['step'] == 'PHONE_INPUT':
+    if state['step'] == 'SLOT_INPUT':
+        try:
+            slot = int(text)
+            if slot < 1 or slot > 5:
+                raise ValueError
+            # Check if slot already used by this user
+            with GLOBAL_DB_LOCK:
+                conn = sqlite3.connect(DATABASE_PATH)
+                c = conn.cursor()
+                c.execute('SELECT 1 FROM hosted_sessions WHERE user_id=? AND slot=?', (user_id, slot))
+                exists = c.fetchone() is not None
+                conn.close()
+            if exists:
+                bot.send_message(chat_id, "❌ This slot is already occupied. Choose another slot.")
+                return
+            state['slot'] = slot
+            state['step'] = 'PHONE_INPUT'
+            bot.send_message(chat_id, f"📱 **STEP 1: SID {state['gender']} MODULE**\n\n✨ Enter your phone number with country code (e.g., `+919876543210`):", parse_mode='Markdown')
+        except ValueError:
+            bot.send_message(chat_id, "❌ Invalid slot. Please enter a number between 1 and 5.")
+        return
+
+    elif state['step'] == 'PHONE_INPUT':
         state['phone'] = text
         progress_msg = bot.send_message(chat_id, "`⚡ Generating SID runtime...`", parse_mode='Markdown')
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            client = TelegramClient(os.path.join(RUNTIMES_DIR, f"temp_{user_id}"), state['api_id'], state['api_hash'], loop=loop)
+            client = TelegramClient(os.path.join(RUNTIMES_DIR, f"temp_{user_id}_{state['slot']}"), state['api_id'], state['api_hash'], loop=loop)
             loop.run_until_complete(client.connect())
             state['client'] = client
             result = loop.run_until_complete(client.send_code_request(state['phone']))
@@ -308,13 +336,14 @@ def finalize_and_deploy(call):
         return bot.send_message(call.message.chat.id, "❌ Session expired.")
 
     gender = state['gender']
+    slot = state['slot']
     preset_choice = (BOY_PRESETS if gender == "BOY" else GIRL_PRESETS)[int(index_str)]
 
     client = state['client']
-    stable_session = os.path.join(RUNTIMES_DIR, f"active_{user_id}")
+    stable_session = os.path.join(RUNTIMES_DIR, f"active_{user_id}_{slot}")
     client.loop.run_until_complete(client.disconnect())
 
-    src, dest = os.path.join(RUNTIMES_DIR, f"temp_{user_id}.session"), f"{stable_session}.session"
+    src, dest = os.path.join(RUNTIMES_DIR, f"temp_{user_id}_{slot}.session"), f"{stable_session}.session"
     if os.path.exists(src):
         if os.path.exists(dest):
             os.remove(dest)
@@ -323,25 +352,25 @@ def finalize_and_deploy(call):
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
-        cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?)',
-                       (user_id, dest, gender, preset_choice, state['api_id'], state['api_hash']))
+        cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?, ?)',
+                       (user_id, slot, dest, gender, preset_choice, state['api_id'], state['api_hash']))
         cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)',
                        (user_id, state['phone']))
         conn.commit()
         conn.close()
 
     p_msg = bot.send_message(call.message.chat.id, "`Initializing Host...`", parse_mode='Markdown')
-    s_txt = f"🚀 **SID {gender} USERBOT DEPLOYED**\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **Identity:** `{preset_choice}`\n» **Status:** `ACTIVE & HOSTED`\n\nSend `.sid_menu` in any chat to view powers!"
+    s_txt = f"🚀 **SID {gender} USERBOT DEPLOYED (Slot {slot})**\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **Identity:** `{preset_choice}`\n» **Status:** `ACTIVE & HOSTED`\n\nSend `.sid_menu` in any chat to view powers!"
     SidAnimationLibrary.play_terminal_pulse(call.message.chat.id, p_msg.message_id, s_txt)
-    threading.Thread(target=deploy_live_userbot_runtime, args=(call.message.chat.id, user_id, gender, preset_choice), daemon=True).start()
+    threading.Thread(target=deploy_live_userbot_runtime, args=(call.message.chat.id, user_id, slot, gender, preset_choice), daemon=True).start()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CORE TELETHON USERBOT ENGINE (DYNAMIC FUNCTIONS)
 # ──────────────────────────────────────────────────────────────────────────────
-def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
+def deploy_live_userbot_runtime(chat_id, user_id, slot, gender, preset_string):
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
-        cursor.execute('SELECT session_key, api_id, api_hash FROM hosted_sessions WHERE user_id = ?', (user_id,))
+        cursor.execute('SELECT session_key, api_id, api_hash FROM hosted_sessions WHERE user_id = ? AND slot = ?', (user_id, slot))
         record = cursor.fetchone(); conn.close()
     if not record:
         if chat_id:
@@ -355,7 +384,7 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
     else:
         client = TelegramClient(StringSession(session_key), int(api_id), api_hash)
 
-    active_runtimes[user_id] = {'client': client, 'loop': asyncio.get_event_loop(), 'thread': threading.current_thread()}
+    active_runtimes[(user_id, slot)] = {'client': client, 'loop': asyncio.get_event_loop(), 'thread': threading.current_thread()}
 
     U_STATE = {
         'auth_users': set(), 'muted': {}, 'safe': {}, 'active_raids': {},
@@ -471,9 +500,15 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
                 count = int(args[0])
                 text = args[1]
                 await event.delete()
+                tasks = []
                 for _ in range(count):
-                    await client.send_message(event.chat_id, text)
-                    await asyncio.sleep(0.15)
+                    tasks.append(client.send_message(event.chat_id, text))
+                    if len(tasks) >= 10:
+                        await asyncio.gather(*tasks)
+                        tasks = []
+                        await asyncio.sleep(0.15)
+                if tasks:
+                    await asyncio.gather(*tasks)
             except Exception as e:
                 pass
 
@@ -485,10 +520,16 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
             try:
                 count = int(args)
                 await event.delete()
+                tasks = []
                 for _ in range(count):
                     random_mix = random.choice([RAPIST_MESSAGES, DIPESH_MESSAGES, HOMIES_MESSAGES, ATTACK_LIST])
-                    await client.send_message(event.chat_id, random.choice(random_mix))
-                    await asyncio.sleep(0.2)
+                    tasks.append(client.send_message(event.chat_id, random.choice(random_mix)))
+                    if len(tasks) >= 10:
+                        await asyncio.gather(*tasks)
+                        tasks = []
+                        await asyncio.sleep(0.2)
+                if tasks:
+                    await asyncio.gather(*tasks)
             except Exception as e:
                 pass
 
@@ -772,10 +813,10 @@ def deploy_live_userbot_runtime(chat_id, user_id, gender, preset_string):
         if chat_id:
             bot.send_message(chat_id, f"❌ Userbot crashed: {e}")
     finally:
-        active_runtimes.pop(user_id, None)
+        active_runtimes.pop((user_id, slot), None)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# SYSTEM METRICS & SHUTDOWN
+# SYSTEM METRICS & SHUTDOWN (Multi‑slot aware)
 # ──────────────────────────────────────────────────────────────────────────────
 @bot.callback_query_handler(func=lambda call: call.data == "telemetry")
 def display_telemetry(call):
@@ -785,19 +826,30 @@ def display_telemetry(call):
 @bot.callback_query_handler(func=lambda call: call.data == "terminate")
 def terminate_worker(call):
     user_id = call.from_user.id
-    if user_id in active_runtimes:
-        active_runtimes[user_id]['loop'].create_task(active_runtimes[user_id]['client'].disconnect())
-        bot.answer_callback_query(call.id, "🛑 SID Container Terminated Successfully.", show_alert=True)
-    else:
+    # Show list of slots to choose from
+    with GLOBAL_DB_LOCK:
+        conn = sqlite3.connect(DATABASE_PATH)
+        c = conn.cursor()
+        c.execute('SELECT slot FROM hosted_sessions WHERE user_id=?', (user_id,))
+        slots = [r[0] for r in c.fetchall()]
+        conn.close()
+    if not slots:
         bot.answer_callback_query(call.id, "❌ No active runtimes detected.", show_alert=True)
+        return
+    # For simplicity, terminate all active slots of user
+    for slot in slots:
+        key = (user_id, slot)
+        if key in active_runtimes:
+            active_runtimes[key]['loop'].create_task(active_runtimes[key]['client'].disconnect())
+    bot.answer_callback_query(call.id, f"🛑 Terminated {len(slots)} SID Container(s).", show_alert=True)
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ─── ADDITIONS FOR OWNER, SUDO, BLOCK, ETC. ───
+# ─── ADDITIONS FOR OWNER, SUDO, BLOCK, ETC. (Multi‑slot aware) ───
 # ════════════════════════════════════════════════════════════════════════════════
 
 OWNER_ID = 123456789  # ← REPLACE WITH YOUR OWNER TELEGRAM ID
 SUPPORT_USERNAME = "@YourSupport"  # ← REPLACE
-MAX_ACCOUNTS_PER_USER = 3
+MAX_ACCOUNTS_PER_USER = 5   # Max slots per user
 MAX_USERBOTS = 50
 START_TIME = time.time()
 
@@ -817,38 +869,45 @@ def db_is_sudo(user_id):
         return res
 
 def get_accounts(user_id):
+    """Return list of dictionaries for all slots of a user."""
+    accounts = []
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
-        c.execute('SELECT session_key, gender, system_preset, api_id, api_hash FROM hosted_sessions WHERE user_id = ?', (user_id,))
-        row = c.fetchone()
+        c.execute('SELECT slot, session_key, gender, system_preset, api_id, api_hash FROM hosted_sessions WHERE user_id = ? ORDER BY slot', (user_id,))
+        rows = c.fetchall()
         conn.close()
-    if row:
-        return [{
-            'slot': 0,
-            'session_key': row[0],
-            'gender': row[1],
-            'system_preset': row[2],
-            'api_id': row[3],
-            'api_hash': row[4],
+    for row in rows:
+        slot, session_key, gender, system_preset, api_id, api_hash = row
+        accounts.append({
+            'slot': slot,
+            'session_key': session_key,
+            'gender': gender,
+            'system_preset': system_preset,
+            'api_id': api_id,
+            'api_hash': api_hash,
             'hosted': True,
             'hosted_at': int(time.time()),
-        }]
-    return []
+        })
+    return accounts
 
 def remove_account(user_id, slot):
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
-        c.execute('DELETE FROM hosted_sessions WHERE user_id = ?', (user_id,))
+        c.execute('DELETE FROM hosted_sessions WHERE user_id = ? AND slot = ?', (user_id, slot))
         conn.commit()
         conn.close()
+    # Remove session file
+    session_path = os.path.join(RUNTIMES_DIR, f"active_{user_id}_{slot}.session")
+    if os.path.exists(session_path):
+        os.remove(session_path)
 
 def get_all_users():
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
-        c.execute('SELECT user_id FROM hosted_sessions')
+        c.execute('SELECT DISTINCT user_id FROM hosted_sessions')
         rows = c.fetchall()
         conn.close()
     return [str(r[0]) for r in rows]
@@ -960,13 +1019,12 @@ def save_api_profile(api_id, api_hash):
 class RunnerWrapper:
     @staticmethod
     def is_running(user_id, slot):
-        return user_id in active_runtimes
+        return (user_id, slot) in active_runtimes
 
     @staticmethod
     def get_uptime(user_id, slot):
-        if user_id in active_runtimes:
-            return "N/A"
-        return None
+        # Not stored; return N/A
+        return "N/A"
 
     @staticmethod
     def running_count():
@@ -977,40 +1035,42 @@ class RunnerWrapper:
         with GLOBAL_DB_LOCK:
             conn = sqlite3.connect(DATABASE_PATH)
             c = conn.cursor()
-            c.execute('SELECT gender, system_preset FROM hosted_sessions WHERE user_id = ?', (uid,))
+            c.execute('SELECT gender, system_preset FROM hosted_sessions WHERE user_id = ? AND slot = ?', (uid, slot))
             row = c.fetchone()
             conn.close()
         if row:
             gender, preset = row
-            threading.Thread(target=deploy_live_userbot_runtime, args=(None, uid, gender, preset), daemon=True).start()
+            threading.Thread(target=deploy_live_userbot_runtime, args=(None, uid, slot, gender, preset), daemon=True).start()
             return True
         return False
 
     @staticmethod
     def restart_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        if uid in active_runtimes:
+        if (uid, slot) in active_runtimes:
             try:
-                loop = active_runtimes[uid]['loop']
-                loop.create_task(active_runtimes[uid]['client'].disconnect())
+                loop = active_runtimes[(uid, slot)]['loop']
+                loop.create_task(active_runtimes[(uid, slot)]['client'].disconnect())
             except:
                 pass
-            active_runtimes.pop(uid, None)
+            active_runtimes.pop((uid, slot), None)
         return RunnerWrapper.start_userbot(uid, slot, api_id, api_hash, session_string, uid_str)
 
     @staticmethod
     def stop_userbot(uid, slot):
-        if uid in active_runtimes:
+        if (uid, slot) in active_runtimes:
             try:
-                loop = active_runtimes[uid]['loop']
-                loop.create_task(active_runtimes[uid]['client'].disconnect())
+                loop = active_runtimes[(uid, slot)]['loop']
+                loop.create_task(active_runtimes[(uid, slot)]['client'].disconnect())
             except:
                 pass
-            active_runtimes.pop(uid, None)
+            active_runtimes.pop((uid, slot), None)
         return True
 
     @staticmethod
     def stop_all_for_user(uid):
-        RunnerWrapper.stop_userbot(uid, 0)
+        accounts = get_accounts(uid)
+        for acct in accounts:
+            RunnerWrapper.stop_userbot(uid, acct['slot'])
 
 runner = RunnerWrapper()
 
@@ -1019,16 +1079,16 @@ def uptime_str():
     h, r = divmod(e, 3600); m, s = divmod(r, 60)
     return f"{h}h {m}m {s}s"
 
-def _phone_label(acct):
+def _phone_label(user_id):
     with GLOBAL_DB_LOCK:
         conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
-        c.execute('SELECT phone FROM user_metadata WHERE user_id = ?', (acct.get('user_id'),))
+        c.execute('SELECT phone FROM user_metadata WHERE user_id = ?', (user_id,))
         row = c.fetchone()
         conn.close()
     return row[0] if row else "Unknown"
 
-# ─── BOT COMMANDS (owner, user, etc.) ───
+# ─── BOT COMMANDS (Multi‑slot aware) ───
 @bot.message_handler(commands=['myaccounts'])
 def cmd_myaccounts(message):
     uid = message.from_user.id
@@ -1039,12 +1099,14 @@ def cmd_myaccounts(message):
     if not accounts:
         bot.reply_to(message, "📱 No accounts hosted. Use /host to deploy.")
         return
+    lines = []
     for acct in accounts:
         slot = acct['slot']
         alive = runner.is_running(uid, slot)
-        phone = _phone_label(acct)
+        phone = _phone_label(uid)  # same phone for all slots? adjust if needed
         status = "🟢 Running" if alive else "🔴 Stopped"
-        bot.reply_to(message, f"📱 Account #{slot+1}\nPhone: {phone}\nStatus: {status}")
+        lines.append(f"📱 Account #{slot}\nPhone: {phone}\nStatus: {status}")
+    bot.reply_to(message, "\n\n".join(lines))
 
 @bot.message_handler(commands=['status'])
 def cmd_status(message):
@@ -1060,9 +1122,9 @@ def cmd_status(message):
         slot = acct['slot']
         alive = runner.is_running(uid, slot)
         uptime = runner.get_uptime(uid, slot) if alive else "—"
-        phone = _phone_label(acct)
+        phone = _phone_label(uid)
         icon = "🟢" if alive else "🔴"
-        lines.append(f"{icon} Account #{slot+1} — {phone}\n   Uptime: {uptime}")
+        lines.append(f"{icon} Account #{slot} — {phone}\n   Uptime: {uptime}")
     bot.reply_to(message, "📊 Userbot Status\n\n" + "\n\n".join(lines))
 
 @bot.message_handler(commands=['restart'])
@@ -1074,6 +1136,7 @@ def cmd_restart(message):
     if not accounts:
         bot.reply_to(message, "❌ No userbot to restart.")
         return
+    # For simplicity, restart the first slot (or ask user)
     acct = accounts[0]
     slot = acct['slot']
     msg = bot.reply_to(message, "🔄 Restarting...")
@@ -1092,23 +1155,31 @@ def cmd_logout(message):
     if not accounts:
         bot.reply_to(message, "❌ No account to logout.")
         return
-    markup = types.InlineKeyboardMarkup()
-    markup.row(
-        types.InlineKeyboardButton("✅ Yes, Logout", callback_data="confirm_logout"),
-        types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout")
-    )
-    bot.reply_to(message, "⚠️ Are you sure you want to logout and delete session?", reply_markup=markup)
+    # If multiple accounts, list slots with buttons
+    if len(accounts) == 1:
+        slot = accounts[0]['slot']
+        markup = types.InlineKeyboardMarkup()
+        markup.row(
+            types.InlineKeyboardButton("✅ Yes, Logout", callback_data=f"confirm_logout_{slot}"),
+            types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout")
+        )
+        bot.reply_to(message, f"⚠️ Logout slot {slot}? This will delete the session.", reply_markup=markup)
+    else:
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for acct in accounts:
+            slot = acct['slot']
+            markup.add(types.InlineKeyboardButton(f"Logout Slot {slot}", callback_data=f"confirm_logout_{slot}"))
+        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout"))
+        bot.reply_to(message, "Select slot to logout:", reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: call.data == "confirm_logout")
-def confirm_logout(call):
+@bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_logout_"))
+def confirm_logout_slot(call):
+    slot = int(call.data.split("_")[-1])
     uid = call.from_user.id
-    runner.stop_userbot(uid, 0)
-    remove_account(uid, 0)
-    session_path = os.path.join(RUNTIMES_DIR, f"active_{uid}.session")
-    if os.path.exists(session_path):
-        os.remove(session_path)
+    runner.stop_userbot(uid, slot)
+    remove_account(uid, slot)
     bot.answer_callback_query(call.id, "Logged out successfully.")
-    bot.edit_message_text("👋 Account logged out. Use /host to deploy again.", call.message.chat.id, call.message.message_id)
+    bot.edit_message_text(f"👋 Slot {slot} logged out. Use /host to deploy again.", call.message.chat.id, call.message.message_id)
 
 @bot.callback_query_handler(func=lambda call: call.data == "cancel_logout")
 def cancel_logout(call):
@@ -1125,11 +1196,11 @@ def cmd_help(message):
 ❓ Help & Commands
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔹 /start       - Welcome screen
-🔹 /host        - Deploy userbot
-🔹 /myaccounts  - View accounts
+🔹 /host        - Deploy userbot (choose slot)
+🔹 /myaccounts  - View accounts (all slots)
 🔹 /status      - Check status
-🔹 /restart     - Restart userbot
-🔹 /logout      - Logout account
+🔹 /restart     - Restart first slot userbot
+🔹 /logout      - Logout account (select slot)
 🔹 /support     - Contact support
 🔹 /help        - This menu
     """
