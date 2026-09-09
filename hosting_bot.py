@@ -8,8 +8,8 @@ import os
 import time
 import shutil
 import random
-import db          # Added missing import
-import runner      # Added missing import
+import json
+import threading
 from io import BytesIO
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
@@ -33,9 +33,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 START_TIME = time.time()
-MAX_ACCOUNTS_PER_USER = 3   # max accounts one user can host
+
+# ─── BOT CONFIGURATION ────────────────────────────────────────────────────────
 BOT_TOKEN = "8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY"
 OWNER_ID = 8115054010
+TELEGRAM_API_ID = 38843772
+TELEGRAM_API_HASH = "875fbb273801c8025d05e98173fca536"
+SUPPORT_USERNAME = "@YourSupport"
+MAX_ACCOUNTS_PER_USER = 3
+MAX_USERBOTS = 50
 
 # ─── CONVERSATION STATES ──────────────────────────────────────────────────────
 ASK_PHONE, ASK_CODE, ASK_2FA = range(3)
@@ -179,18 +185,11 @@ SID_FLOW_BOT_MENU = """
 """
 
 # ════════════════════════════════════════════════════════════════════════════════
-#   SID FLOW BOT: ENGINE METHODS (EXTRACTED)
+#   SID FLOW BOT: ENGINE METHODS
 # ════════════════════════════════════════════════════════════════════════════════
-# Import this wrapper into your runner.py to instantly apply all Flow Bot Logic 
-# to your Telethon clients.
-
 def register_flow_bot_methods(client: TelegramClient, saved_texts: list = None, all_texts: list = None):
-    """
-    Attaches the high-speed Flow Bot methods (.swipe, .flowdelay, etc.) to a Telethon client.
-    """
     flow_logger = logging.getLogger("FlowBotEngine")
     
-    # State variables scoped to this instance
     flow_mode = True
     flow_delay = 0.2
     flow_count = 30
@@ -218,7 +217,6 @@ def register_flow_bot_methods(client: TelegramClient, saved_texts: list = None, 
     async def cmd_swipe(event):
         nonlocal swipe_task
         args = event.raw_text.split(maxsplit=1)
-        
         if len(args) > 1:
             text = args[1]
             await event.reply(f"🌊 Swiping with custom text: {text[:30]}...")
@@ -293,6 +291,213 @@ def register_flow_bot_methods(client: TelegramClient, saved_texts: list = None, 
             if flow_mode:
                 await event.reply("✅ Swipe finished.")
 
+# ════════════════════════════════════════════════════════════════════════════════
+#   DATABASE MANAGER (REPLACES db.py)
+# ════════════════════════════════════════════════════════════════════════════════
+class DBManager:
+    def __init__(self, filename="hosting_db.json"):
+        self.filename = filename
+        self.data = {
+            "users": {}, 
+            "accounts": {}, 
+            "blocked": [],
+            "sudo": [],
+            "bot_settings": {"is_on": True},
+            "welcome_video": None
+        }
+        self.load()
+
+    def load(self):
+        if os.path.exists(self.filename):
+            try:
+                with open(self.filename, "r") as f:
+                    self.data = json.load(f)
+            except Exception:
+                pass
+
+    def save(self):
+        with open(self.filename, "w") as f:
+            json.dump(self.data, f)
+
+    def is_sudo(self, uid, owner_id):
+        return uid == owner_id or uid in self.data.get("sudo", [])
+
+    def is_blocked(self, uid):
+        return uid in self.data.get("blocked", [])
+
+    def user_exists(self, uid):
+        return str(uid) in self.data.get("users", {})
+
+    def save_user_meta(self, uid, meta):
+        uid = str(uid)
+        if uid not in self.data["users"]:
+            self.data["users"][uid] = {}
+        self.data["users"][uid].update(meta)
+        self.save()
+
+    def get_accounts(self, uid):
+        uid = str(uid)
+        accs = self.data["accounts"].get(uid, {})
+        return list(accs.values())
+
+    def get_account(self, uid, slot):
+        uid = str(uid)
+        return self.data["accounts"].get(uid, {}).get(str(slot))
+
+    def add_account(self, uid, acc_dict):
+        uid = str(uid)
+        if uid not in self.data["accounts"]:
+            self.data["accounts"][uid] = {}
+        self.data["accounts"][uid][str(acc_dict["slot"])] = acc_dict
+        self.save()
+
+    def remove_account(self, uid, slot):
+        uid = str(uid)
+        if uid in self.data["accounts"] and str(slot) in self.data["accounts"][uid]:
+            del self.data["accounts"][uid][str(slot)]
+            self.save()
+
+    def get_welcome_video(self):
+        return self.data.get("welcome_video")
+
+    def set_welcome_video(self, data):
+        self.data["welcome_video"] = data
+        self.save()
+
+    def remove_welcome_video(self):
+        self.data["welcome_video"] = None
+        self.save()
+
+    def get_random_anime_image(self):
+        return None # Graceful fallback to text
+
+    def hosted_count(self):
+        return sum(len(accs) for accs in self.data["accounts"].values())
+
+    def get_all_users(self):
+        return list(self.data["users"].keys())
+
+    def user_count(self):
+        return len(self.data["users"])
+
+    def get_blocked(self):
+        return self.data.get("blocked", [])
+
+    def block_user(self, uid):
+        if uid not in self.data["blocked"]:
+            self.data["blocked"].append(uid)
+            self.save()
+
+    def unblock_user(self, uid):
+        if uid in self.data["blocked"]:
+            self.data["blocked"].remove(uid)
+            self.save()
+
+    def get_sudo_users(self):
+        return self.data.get("sudo", [])
+
+    def add_sudo(self, uid):
+        if uid not in self.data["sudo"]:
+            self.data["sudo"].append(uid)
+            self.save()
+
+    def remove_sudo(self, uid):
+        if uid in self.data["sudo"]:
+            self.data["sudo"].remove(uid)
+            self.save()
+
+    def is_bot_on(self):
+        return self.data.get("bot_settings", {}).get("is_on", True)
+
+    def set_bot_settings(self, settings):
+        if "bot_settings" not in self.data:
+            self.data["bot_settings"] = {}
+        self.data["bot_settings"].update(settings)
+        self.save()
+
+db = DBManager()
+
+# ════════════════════════════════════════════════════════════════════════════════
+#   RUNNER MANAGER (REPLACES runner.py)
+# ════════════════════════════════════════════════════════════════════════════════
+active_runtimes = {}
+
+def _run_telethon_client(uid, slot, api_id, api_hash, session_string):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        client = TelegramClient(StringSession(session_string), int(api_id), api_hash, loop=loop)
+        register_flow_bot_methods(client, saved_texts=[], all_texts=[])
+        
+        loop.run_until_complete(client.connect())
+        if not loop.run_until_complete(client.is_user_authorized()):
+            return
+            
+        active_runtimes[(str(uid), str(slot))] = {
+            "client": client,
+            "loop": loop,
+            "start_time": time.time()
+        }
+        loop.run_until_complete(client.run_until_disconnected())
+    except Exception as e:
+        logger.error(f"Userbot thread error: {e}")
+    finally:
+        active_runtimes.pop((str(uid), str(slot)), None)
+
+class RunnerManager:
+    def is_running(self, uid, slot):
+        return (str(uid), str(slot)) in active_runtimes
+
+    def get_uptime(self, uid, slot):
+        key = (str(uid), str(slot))
+        if key in active_runtimes:
+            e = int(time.time() - active_runtimes[key]["start_time"])
+            h, r = divmod(e, 3600); m, s = divmod(r, 60)
+            return f"{h}h {m}m {s}s"
+        return "N/A"
+
+    def running_count(self):
+        return len(active_runtimes)
+
+    def start_userbot(self, uid, slot, api_id, api_hash, session_string, uid_str):
+        key = (str(uid), str(slot))
+        if key in active_runtimes:
+            return True
+        try:
+            t = threading.Thread(
+                target=_run_telethon_client, 
+                args=(uid, slot, api_id, api_hash, session_string), 
+                daemon=True
+            )
+            t.start()
+            time.sleep(1) # Allow connection time
+            return True
+        except Exception as e:
+            logger.error(f"Failed to start thread: {e}")
+            return False
+
+    def stop_userbot(self, uid, slot):
+        key = (str(uid), str(slot))
+        if key in active_runtimes:
+            try:
+                loop = active_runtimes[key]["loop"]
+                client = active_runtimes[key]["client"]
+                asyncio.run_coroutine_threadsafe(client.disconnect(), loop)
+            except Exception:
+                pass
+        return True
+
+    def restart_userbot(self, uid, slot, api_id, api_hash, session_string, uid_str):
+        self.stop_userbot(uid, slot)
+        time.sleep(2)
+        return self.start_userbot(uid, slot, api_id, api_hash, session_string, uid_str)
+
+    def stop_all_for_user(self, uid):
+        slots_to_stop = [s for (u, s) in active_runtimes.keys() if u == str(uid)]
+        for slot in slots_to_stop:
+            self.stop_userbot(uid, slot)
+
+runner = RunnerManager()
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   FONT STYLES
