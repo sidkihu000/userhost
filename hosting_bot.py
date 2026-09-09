@@ -72,7 +72,7 @@ DIPESH_MESSAGES = [
     "Teri ma Kali randy 💔🦋", "Chal Ma Chuda mere se 🖕", "Chal 𝐃ɪᴘᴇsʜ ko Baap Bol",
     "Teri ma mar du randyke 😂🦋", "KHAKE BURGUR TERI MA CHODU GHAR GHAR", "BAAP BOL MUJHE GAREEB",
     "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝑒𝒉𝑒😂",
-    "Tᴇʀᴀ ʙᴀᴀᴘ Sᴛᴀᴛɪᴏɴ Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵𝘪𝘺𝘢 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
+    "Tᴇʀᴀ ʙᴀᴀᴘ SᴛᴀᴛɪᴏN Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵ɪʏᴀ 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
     "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂𝒏𝒈𝒊 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
     "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜᴇ MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ Tᴇʀɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
     "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ Tᴇʀɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
@@ -140,19 +140,16 @@ SID_MASTER_MENU = """
 • `.heart` (Love Burst)
 • `.matrix` (Binary Code)
 • `.explode` (Bomb Effect)
-• `.typing [text]`
 
 🛠 **UTILITIES**
-• `.song [name]` (YT Download)
-• `.qr [text]` (Generate QR)
-• `.tts [text]` (Voice note)
-• `.copy [reply]` / `.back` (Clone)
 • `.ping` / `.alive` / `.sid`
+• `.menu` / `.help`
 
-🛑 **ADMIN / CONTROL**
-• `.mute` / `.unmute`
-• `.safe` / `.unsafe`
-• `.purge` (Reply to start)
+🌊 **FLOW BOT COMMANDS**
+• `.swipe <text>`
+• `.stopswipe`
+• `.flowdelay <seconds>`
+• `.flowcount <n>`
 
 ===================================
  Powered by SID Core v6.0-DYNAMIC
@@ -163,7 +160,7 @@ SID_FLOW_BOT_MENU = """
       💖  SID BEBO FLOW BOT  💖
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  🌊 This is the high‑speed flow engine.
+  🌊 High‑speed flow engine.
   Use `.swipe` to start a swipe flood.
 
 【 🌊 𝗙𝗟𝗢𝗪 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦 】
@@ -175,124 +172,259 @@ SID_FLOW_BOT_MENU = """
   ✦ .flowdelay <seconds>    → set delay between messages
   ✦ .flowcount <n>          → set number of messages per swipe
 
-【 💡 𝗧𝗜𝗣 】
-  Swipe uses the powerful text library from SID BEBO.
-  You can also add your own texts with `.addtext`.
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        💖  SID BEBO — 𝗙𝗹𝗼𝘄 𝘄𝗶𝘁𝗵 𝗣𝗼𝘄𝗲𝗿
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
 # ════════════════════════════════════════════════════════════════════════════════
-#   SID FLOW BOT: ENGINE METHODS
+#   USERBOT ENGINE REGISTRATION
 # ════════════════════════════════════════════════════════════════════════════════
-def register_flow_bot_methods(client: TelegramClient, saved_texts: list = None, all_texts: list = None):
-    flow_logger = logging.getLogger("FlowBotEngine")
-    
-    flow_mode = True
-    flow_delay = 0.2
-    flow_count = 30
-    swipe_task = None
-    
-    _saved_texts = saved_texts or []
-    _all_texts = all_texts or ["🌊 Flow Bot Swipe Flood initiated!"]
+def register_userbot_engine(client: TelegramClient, user_id: int):
+    U_STATE = {
+        'start_time': time.time(),
+        'active_raids': {},
+        'flow_delay': 0.2,
+        'flow_count': 30,
+        'swipe_task': None
+    }
 
-    def flow_command(cmd):
-        def decorator(func):
-            @client.on(events.NewMessage(pattern=f"^[/.]{cmd}(?:\\b|$)"))
-            async def handler(event):
-                if not flow_mode:
-                    await event.reply("❌ Flow bot is OFF.")
-                    return
+    def is_authorized(event):
+        return event.out or event.sender_id == user_id
+
+    async def _safe_edit(event, text):
+        if event.out:
+            try:
+                return await event.edit(text, parse_mode='md')
+            except Exception:
                 try:
-                    await func(event)
-                except Exception as e:
-                    flow_logger.error(f"Error in /{cmd}: {e}", exc_info=True)
-                    await event.reply(f"❌ Error: {e}")
-            return handler
-        return decorator
-
-    @flow_command("swipe")
-    async def cmd_swipe(event):
-        nonlocal swipe_task
-        args = event.raw_text.split(maxsplit=1)
-        if len(args) > 1:
-            text = args[1]
-            await event.reply(f"🌊 Swiping with custom text: {text[:30]}...")
+                    return await event.edit(text)
+                except Exception:
+                    return await event.reply(text)
         else:
-            if _saved_texts:
-                text = random.choice(_saved_texts)
-            else:
-                text = random.choice(_all_texts)
-            await event.reply(f"🌊 Swiping with random text.")
+            return await event.reply(text)
+
+    async def get_target(event, arg=""):
+        if event.is_reply:
+            reply_msg = await event.get_reply_message()
+            return reply_msg.sender_id
+        if arg:
+            try:
+                entity = await client.get_entity(arg)
+                return entity.id
+            except Exception:
+                pass
+        return None
+
+    # ── Status & Utilities ──
+    @client.on(events.NewMessage(pattern=r"^[/.](?:alive|sid)$"))
+    async def ub_alive(event):
+        if not is_authorized(event): return
+        up = int(time.time() - U_STATE['start_time'])
+        h, r = divmod(up, 3600); m, s = divmod(r, 60)
+        txt = (
+            f"👑 **SID PREMIUM USERBOT ENGINE** 👑\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"» **Status:** `ONLINE & DOMINATING` 🔥\n"
+            f"» **Version:** `v6.0-SID-DYNAMIC`\n"
+            f"» **Uptime:** `{h}h {m}m {s}s`\n"
+            f"» **Owner ID:** `{user_id}`\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"⚡ *Send .menu to view full command list!*"
+        )
+        await _safe_edit(event, txt)
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:ping)$"))
+    async def ub_ping(event):
+        if not is_authorized(event): return
+        start_t = time.time()
+        await _safe_edit(event, "⚡ `Pinging...`")
+        latency = round((time.time() - start_t) * 1000, 2)
+        await _safe_edit(event, f"😈 **SID SPEED:** `{latency} ms` ⚡")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:menu|sid_menu|help|commands)$"))
+    async def ub_menu(event):
+        if not is_authorized(event): return
+        await _safe_edit(event, SID_MASTER_MENU)
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:flowmenu)$"))
+    async def ub_flowmenu(event):
+        if not is_authorized(event): return
+        await _safe_edit(event, SID_FLOW_BOT_MENU)
+
+    # ── Raid Commands ──
+    def register_raid(cmd, text_array):
+        @client.on(events.NewMessage(pattern=rf"^[/.]{cmd}(?:\s+(.*))?$"))
+        async def start_raid(event):
+            if not is_authorized(event): return
+            arg = event.pattern_match.group(1) or ""
+            tgt = await get_target(event, arg.strip())
+            if not tgt:
+                return await _safe_edit(event, "❌ Reply to a user or mention @username.")
+            if cmd not in U_STATE['active_raids']:
+                U_STATE['active_raids'][cmd] = set()
+            U_STATE['active_raids'][cmd].add(tgt)
+            await _safe_edit(event, f"🔥 **{cmd.upper()} RAID ON** → `{tgt}`")
+
+        @client.on(events.NewMessage(pattern=rf"^[/.](?:s{cmd}|stop{cmd})$"))
+        async def stop_raid(event):
+            if not is_authorized(event): return
+            if cmd in U_STATE['active_raids']:
+                U_STATE['active_raids'][cmd].clear()
+            await _safe_edit(event, f"🛑 **{cmd.upper()} RAID OFF**")
+
+    register_raid("attack", ATTACK_LIST)
+    register_raid("roast", ROAST_LIST)
+    register_raid("diss", DISS_LIST)
+    register_raid("war", WAR_LIST)
+    register_raid("savage", SAVAGE_LIST)
+    register_raid("rebel", DIPESH_MESSAGES)
+    register_raid("sid", RAPIST_MESSAGES)
+    register_raid("homies", HOMIES_MESSAGES)
+
+    @client.on(events.NewMessage(incoming=True))
+    async def raid_trigger(event):
+        sender = event.sender_id
+        if not sender: return
+        array_map = {
+            "attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST,
+            "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES,
+            "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES
+        }
+        for cmd, targets in U_STATE['active_raids'].items():
+            if sender in targets:
+                try:
+                    await event.reply(random.choice(array_map[cmd]))
+                    await asyncio.sleep(0.3)
+                except FloodWaitError as e:
+                    await asyncio.sleep(e.seconds)
+                except Exception:
+                    pass
+
+    # ── Spam Commands ──
+    @client.on(events.NewMessage(pattern=r"^[/.](?:spam)\s+(\d+)\s+(.+)"))
+    async def ub_spam(event):
+        if not is_authorized(event): return
+        count = int(event.pattern_match.group(1))
+        text = event.pattern_match.group(2)
+        if event.out:
+            try: await event.delete()
+            except Exception: pass
+        for _ in range(count):
+            try:
+                await client.send_message(event.chat_id, text)
+                await asyncio.sleep(0.15)
+            except FloodWaitError as e:
+                await asyncio.sleep(e.seconds)
+            except Exception:
+                break
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:mixspam)\s+(\d+)"))
+    async def ub_mixspam(event):
+        if not is_authorized(event): return
+        count = int(event.pattern_match.group(1))
+        all_pool = RAPIST_MESSAGES + DIPESH_MESSAGES + HOMIES_MESSAGES + ATTACK_LIST
+        if event.out:
+            try: await event.delete()
+            except Exception: pass
+        for _ in range(count):
+            try:
+                await client.send_message(event.chat_id, random.choice(all_pool))
+                await asyncio.sleep(0.2)
+            except FloodWaitError as e:
+                await asyncio.sleep(e.seconds)
+            except Exception:
+                break
+
+    # ── Animations ──
+    @client.on(events.NewMessage(pattern=r"^[/.](?:hack)$"))
+    async def ub_hack(event):
+        if not is_authorized(event): return
+        for frame in HACK_ANIMATION:
+            await _safe_edit(event, frame)
+            await asyncio.sleep(0.8)
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:load)$"))
+    async def ub_load(event):
+        if not is_authorized(event): return
+        for i in range(1, 101, 20):
+            frame = LOAD_BAR_FRAMES[(i // 20) % len(LOAD_BAR_FRAMES)]
+            await _safe_edit(event, f"⏳ **Loading Matrix:** `{frame} {i}%`")
+            await asyncio.sleep(0.4)
+        await _safe_edit(event, "✅ **SID MATRIX FULLY LOADED!**")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:magic)$"))
+    async def ub_magic(event):
+        if not is_authorized(event): return
+        phrase = "SID IS INCREDIBLE"
+        for i in range(len(phrase)):
+            await _safe_edit(event, f"🪄 `{phrase[:i+1]}`")
+            await asyncio.sleep(0.2)
+        await _safe_edit(event, f"✨ **{phrase}** ✨")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:heart)$"))
+    async def ub_heart(event):
+        if not is_authorized(event): return
+        for h in HEART_ANIMATION:
+            await _safe_edit(event, f"Generating love... {h}")
+            await asyncio.sleep(0.4)
+        await _safe_edit(event, "💖 **SID SENDS LOVE!** 💖")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:explode)$"))
+    async def ub_explode(event):
+        if not is_authorized(event): return
+        for frame in EXPLODE_ANIMATION:
+            await _safe_edit(event, frame)
+            await asyncio.sleep(0.8)
+
+    # ── Flow Bot (Swipe) Methods ──
+    @client.on(events.NewMessage(pattern=r"^[/.](?:swipe)(?:\s+(.*))?$"))
+    async def ub_swipe(event):
+        if not is_authorized(event): return
+        custom_txt = event.pattern_match.group(1)
+        txt = custom_txt.strip() if custom_txt else random.choice(RAPIST_MESSAGES + DIPESH_MESSAGES + HOMIES_MESSAGES)
+        
+        if U_STATE['swipe_task'] and not U_STATE['swipe_task'].done():
+            U_STATE['swipe_task'].cancel()
             
-        chat = event.chat
-        if swipe_task and not swipe_task.done():
-            swipe_task.cancel()
-            
-        swipe_task = asyncio.create_task(swipe_loop(event, chat, text))
-        await event.reply(f"✅ Swipe started! {flow_count} messages with delay {flow_delay}s. Use .stopswipe to stop.")
-
-    @flow_command("stopswipe")
-    async def cmd_stopswipe(event):
-        nonlocal swipe_task
-        if swipe_task and not swipe_task.done():
-            swipe_task.cancel()
-            await event.reply("✅ Swipe stopped.")
-        else:
-            await event.reply("ℹ️ No active swipe.")
-
-    @flow_command("flowdelay")
-    async def cmd_flowdelay(event):
-        nonlocal flow_delay
-        args = event.raw_text.split(maxsplit=1)
-        if len(args) < 2:
-            return await event.reply(f"ℹ️ Current flow delay: {flow_delay}s")
-        try:
-            new_delay = float(args[1])
-            if new_delay < 0.05:
-                return await event.reply("⚠️ Delay too small, min 0.05s")
-            flow_delay = new_delay
-            await event.reply(f"✅ Flow delay set to {flow_delay}s")
-        except ValueError:
-            await event.reply("⚠️ Invalid delay.")
-
-    @flow_command("flowcount")
-    async def cmd_flowcount(event):
-        nonlocal flow_count
-        args = event.raw_text.split(maxsplit=1)
-        if len(args) < 2:
-            return await event.reply(f"ℹ️ Current flow count: {flow_count}")
-        try:
-            new_count = int(args[1])
-            if new_count < 1:
-                return await event.reply("⚠️ Count must be >= 1")
-            flow_count = new_count
-            await event.reply(f"✅ Flow count set to {flow_count}")
-        except ValueError:
-            await event.reply("⚠️ Invalid count.")
-
-    async def swipe_loop(event, chat, text):
-        nonlocal swipe_task
-        try:
-            for _ in range(flow_count):
-                if not flow_mode:
+        async def _swipe_runner():
+            for _ in range(U_STATE['flow_count']):
+                try:
+                    await client.send_message(event.chat_id, txt)
+                    await asyncio.sleep(U_STATE['flow_delay'])
+                except Exception:
                     break
-                try:
-                    await client.send_message(chat, text)
-                except Exception as e:
-                    flow_logger.error(f"Swipe send error: {e}")
-                await asyncio.sleep(flow_delay)
-        except asyncio.CancelledError:
-            pass
-        finally:
-            swipe_task = None
-            if flow_mode:
-                await event.reply("✅ Swipe finished.")
+                    
+        U_STATE['swipe_task'] = asyncio.create_task(_swipe_runner())
+        await _safe_edit(event, f"🌊 **Swipe Started!** {U_STATE['flow_count']} msgs ({U_STATE['flow_delay']}s delay). Use `.stopswipe` to stop.")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:stopswipe)$"))
+    async def ub_stopswipe(event):
+        if not is_authorized(event): return
+        if U_STATE['swipe_task'] and not U_STATE['swipe_task'].done():
+            U_STATE['swipe_task'].cancel()
+            await _safe_edit(event, "🛑 **Swipe Stopped!**")
+        else:
+            await _safe_edit(event, "ℹ️ No active swipe.")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:flowdelay)\s+([0-9.]+)"))
+    async def ub_flowdelay(event):
+        if not is_authorized(event): return
+        d = float(event.pattern_match.group(1))
+        if d < 0.05: d = 0.05
+        U_STATE['flow_delay'] = d
+        await _safe_edit(event, f"⏱️ **Flow Delay set to:** `{d}s`")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:flowcount)\s+(\d+)"))
+    async def ub_flowcount(event):
+        if not is_authorized(event): return
+        c = int(event.pattern_match.group(1))
+        if c < 1: c = 1
+        U_STATE['flow_count'] = c
+        await _safe_edit(event, f"🔢 **Flow Count set to:** `{c}`")
 
 # ════════════════════════════════════════════════════════════════════════════════
-#   DATABASE MANAGER (REPLACES db.py)
+#   DATABASE MANAGER
 # ════════════════════════════════════════════════════════════════════════════════
 class DBManager:
     def __init__(self, filename="hosting_db.json"):
@@ -316,8 +448,11 @@ class DBManager:
                 pass
 
     def save(self):
-        with open(self.filename, "w") as f:
-            json.dump(self.data, f)
+        try:
+            with open(self.filename, "w") as f:
+                json.dump(self.data, f, indent=2)
+        except Exception:
+            pass
 
     def is_sudo(self, uid, owner_id):
         return uid == owner_id or uid in self.data.get("sudo", [])
@@ -369,7 +504,7 @@ class DBManager:
         self.save()
 
     def get_random_anime_image(self):
-        return None # Graceful fallback to text
+        return None
 
     def hosted_count(self):
         return sum(len(accs) for accs in self.data["accounts"].values())
@@ -418,7 +553,7 @@ class DBManager:
 db = DBManager()
 
 # ════════════════════════════════════════════════════════════════════════════════
-#   RUNNER MANAGER (REPLACES runner.py)
+#   RUNNER MANAGER
 # ════════════════════════════════════════════════════════════════════════════════
 active_runtimes = {}
 
@@ -427,10 +562,11 @@ def _run_telethon_client(uid, slot, api_id, api_hash, session_string):
     asyncio.set_event_loop(loop)
     try:
         client = TelegramClient(StringSession(session_string), int(api_id), api_hash, loop=loop)
-        register_flow_bot_methods(client, saved_texts=[], all_texts=[])
+        register_userbot_engine(client, uid)
         
         loop.run_until_complete(client.connect())
         if not loop.run_until_complete(client.is_user_authorized()):
+            logger.warning(f"Userbot {uid}:{slot} is not authorized.")
             return
             
         active_runtimes[(str(uid), str(slot))] = {
@@ -438,6 +574,7 @@ def _run_telethon_client(uid, slot, api_id, api_hash, session_string):
             "loop": loop,
             "start_time": time.time()
         }
+        logger.info(f"Userbot successfully started for user {uid} (slot {slot})")
         loop.run_until_complete(client.run_until_disconnected())
     except Exception as e:
         logger.error(f"Userbot thread error: {e}")
@@ -470,7 +607,7 @@ class RunnerManager:
                 daemon=True
             )
             t.start()
-            time.sleep(1) # Allow connection time
+            time.sleep(1)
             return True
         except Exception as e:
             logger.error(f"Failed to start thread: {e}")
@@ -489,7 +626,7 @@ class RunnerManager:
 
     def restart_userbot(self, uid, slot, api_id, api_hash, session_string, uid_str):
         self.stop_userbot(uid, slot)
-        time.sleep(2)
+        time.sleep(1)
         return self.start_userbot(uid, slot, api_id, api_hash, session_string, uid_str)
 
     def stop_all_for_user(self, uid):
@@ -702,8 +839,6 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("⚙️  𝗦𝗲𝘁𝘁𝗶𝗻𝗴𝘀",   callback_data="settings_menu"),
         ])
 
-    anime_bytes = db.get_random_anime_image()
-    
     text = (
         f"👑 **SID PREMIUM USERBOT ARCHITECTURE** 👑\n"
         f"{DIV}\n"
@@ -715,25 +850,11 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{italic_serif('Select an option below')} 👇"
     )
 
-    try:
-        if anime_bytes:
-            anime_file = BytesIO(anime_bytes)
-            anime_file.name = "anime.png"
-            await update.message.reply_photo(
-                photo=anime_file,
-                caption=text,
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-            )
-        else:
-            raise RuntimeError("No anime image available")
-    except Exception as e:
-        logger.warning(f"Failed to send anime image: {e}")
-        await update.message.reply_text(
-            text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
+    await update.message.reply_text(
+        text,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   /setwelcomevideo (Owner)
@@ -773,7 +894,6 @@ async def cmd_setwelcomevideo(update: Update, context: ContextTypes.DEFAULT_TYPE
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
 #   /removewelcomevideo (Owner)
 # ════════════════════════════════════════════════════════════════════════════════
@@ -792,7 +912,6 @@ async def cmd_removewelcomevideo(update: Update, context: ContextTypes.DEFAULT_T
         f"{script('The /start message will now show only text.')}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   /help
@@ -832,7 +951,6 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
-
 # ════════════════════════════════════════════════════════════════════════════════
 #   MENUS
 # ════════════════════════════════════════════════════════════════════════════════
@@ -845,9 +963,8 @@ async def cmd_flowmenu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_blocked(update): return
     await update.message.reply_text(SID_FLOW_BOT_MENU, parse_mode=ParseMode.MARKDOWN)
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /host — Phone + OTP Login Flow  (supports multiple accounts)
+#   /host — Phone + OTP Login Flow
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_host_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -899,7 +1016,6 @@ async def cmd_host_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ASK_PHONE
 
-
 async def host_got_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid   = update.effective_user.id
     phone = update.message.text.strip()
@@ -950,7 +1066,6 @@ async def host_got_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode=ParseMode.MARKDOWN,
         )
         return ConversationHandler.END
-
 
 async def host_got_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid  = update.effective_user.id
@@ -1010,7 +1125,6 @@ async def host_got_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
-
 async def host_got_2fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid      = update.effective_user.id
     password = update.message.text.strip()
@@ -1038,7 +1152,6 @@ async def host_got_2fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
-
 async def _deploy_userbot(update, context, uid, session_string, phone, msg):
     name     = update.effective_user.first_name or "User"
     accounts = db.get_accounts(uid)
@@ -1048,7 +1161,7 @@ async def _deploy_userbot(update, context, uid, session_string, phone, msg):
         slot += 1
     acc_num = slot + 1
 
-    # ─── SID MASTER TERMINAL PULSE ANIMATION ───
+    # ─── Terminal Animation ───
     frames = [
         "🟢 `[▱▱▱▱▱▱▱▱▱] Booting Sid Kernel...`",
         "🟡 `[▰▰▰▱▱▱▱▱▱] Injecting Modules...`",
@@ -1059,7 +1172,7 @@ async def _deploy_userbot(update, context, uid, session_string, phone, msg):
     for frame in frames:
         try:
             await msg.edit_text(frame, parse_mode=ParseMode.MARKDOWN)
-            await asyncio.sleep(0.6)
+            await asyncio.sleep(0.5)
         except Exception:
             pass
 
@@ -1077,57 +1190,47 @@ async def _deploy_userbot(update, context, uid, session_string, phone, msg):
             "phone":          phone,
         })
         
-        anime_bytes = db.get_random_anime_image()
+        deploy_caption = (
+            f"{TOP}\n"
+            f"║  🎉  {bold_serif('Deploy Successful')}  🎉  ║\n"
+            f"{BOT}\n\n"
+            f"✅ {sans_bold('Account')} : {mono('#' + str(acc_num))}\n"
+            f"📱 {sans_bold('Phone')}   : {mono(phone if phone else 'N/A')}\n"
+            f"⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}\n"
+            f"📦 {sans_bold('Commands')}: {mono('500+')}\n\n"
+            f"{DIV}\n"
+            f"🔹 {italic_serif('Kisi bhi chat mein')} {mono('.alive')} {italic_serif('bhejo')}\n"
+            f"🔹 {italic_serif('Commands dekhne ke liye')} {mono('.menu')} {italic_serif('bhejo')}\n"
+            f"🔹 /myaccounts {italic_serif('se sab accounts dekho')}\n"
+            f"🔹 /host {italic_serif('se aur account add karo')}"
+        )
+        
+        # Guaranteed Delivery of Deploy Message
         try:
-            await msg.delete()
-            if not anime_bytes:
-                raise RuntimeError("No anime image available")
-            anime_file = BytesIO(anime_bytes)
-            anime_file.name = "deployment_anime.png"
-            await context.bot.send_photo(
-                chat_id=update.effective_chat.id,
-                photo=anime_file,
-                caption=(
-                    f"{TOP}\n"
-                    f"║  🎉  {bold_serif('Deploy Successful')}  🎉  ║\n"
-                    f"{BOT}\n\n"
-                    f"✅ {sans_bold('Account')} : {mono('#' + str(acc_num))}\n"
-                    f"📱 {sans_bold('Phone')}   : {mono(phone if phone else 'N/A')}\n"
-                    f"⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}\n"
-                    f"📦 {sans_bold('Commands')}: {mono('500+')}\n\n"
-                    f"{DIV}\n"
-                    f"🔹 {italic_serif('Kisi bhi chat mein')} {mono('.alive')} {italic_serif('bhejo')}\n"
-                    f"🔹 /myaccounts {italic_serif('se sab accounts dekho')}\n"
-                    f"🔹 /host {italic_serif('se aur account add karo')}"
-                ),
+            await msg.edit_text(
+                deploy_caption,
                 parse_mode=ParseMode.MARKDOWN,
             )
-        except Exception as e:
-            logger.warning(f"Failed to send anime image after deploy: {e}")
-            await msg.edit_text(
-                f"{TOP}\n"
-                f"║  🎉  {bold_serif('Deploy Successful')}  🎉  ║\n"
-                f"{BOT}\n\n"
-                f"✅ {sans_bold('Account')} : {mono('#' + str(acc_num))}\n"
-                f"📱 {sans_bold('Phone')}   : {mono(phone if phone else 'N/A')}\n"
-                f"⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}\n"
-                f"📦 {sans_bold('Commands')}: {mono('500+')}\n\n"
-                f"{DIV}\n"
-                f"🔹 {italic_serif('Kisi bhi chat mein')} {mono('.alive')} {italic_serif('bhejo')}\n"
-                f"🔹 /myaccounts {italic_serif('se sab accounts dekho')}\n"
-                f"🔹 /host {italic_serif('se aur account add karo')}",
+        except Exception:
+            await update.effective_chat.send_message(
+                deploy_caption,
                 parse_mode=ParseMode.MARKDOWN,
             )
     else:
-        await msg.edit_text(
-            f"❌ {bold_serif('Deploy Failed')}\n\n"
-            f"{script('Possible reasons:')}\n"
-            f"• {fraktur('Account banned by Telegram')}\n"
-            f"• {fraktur('Server error')}\n\n"
-            f"📩 {sans_bold('Support')}: {SUPPORT_USERNAME}",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-
+        try:
+            await msg.edit_text(
+                f"❌ {bold_serif('Deploy Failed')}\n\n"
+                f"{script('Possible reasons:')}\n"
+                f"• {fraktur('Account banned by Telegram')}\n"
+                f"• {fraktur('Server error')}\n\n"
+                f"📩 {sans_bold('Support')}: {SUPPORT_USERNAME}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception:
+            await update.effective_chat.send_message(
+                "❌ Deploy Failed. Please try /host again.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
 
 async def host_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await cleanup_pending(update.effective_user.id)
@@ -1137,14 +1240,12 @@ async def host_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /broadcast — Owner-only broadcast to all registered users
+#   /broadcast (Owner)
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await owner_only(update):
-        return
+    if not await owner_only(update): return
 
     reply = update.message.reply_to_message
     text_arg = " ".join(context.args).strip()
@@ -1230,9 +1331,8 @@ async def cmd_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /myaccounts — list all accounts with inline manage buttons
+#   /myaccounts
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_myaccounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1289,7 +1389,6 @@ async def cmd_myaccounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
 #   /status
 # ════════════════════════════════════════════════════════════════════════════════
@@ -1337,9 +1436,8 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /restart  (single → restart; multiple → show selection)
+#   /restart
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1361,7 +1459,6 @@ async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _do_restart(update, uid, slot, acct)
         return
 
-    # Multiple accounts — show selection
     keyboard = []
     for acct in hosted:
         slot  = acct["slot"]
@@ -1382,7 +1479,6 @@ async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
-
 
 async def _do_restart(update_or_query, uid, slot, acct):
     is_cb = hasattr(update_or_query, "callback_query") and update_or_query.callback_query
@@ -1411,9 +1507,8 @@ async def _do_restart(update_or_query, uid, slot, acct):
             parse_mode=ParseMode.MARKDOWN,
         )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /logout  (single → confirm; multiple → show selection)
+#   /logout
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1446,7 +1541,6 @@ async def cmd_logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Multiple accounts — show selection
     keyboard = []
     for acct in hosted:
         slot  = acct["slot"]
@@ -1468,16 +1562,14 @@ async def cmd_logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
-
 async def _do_logout(uid, slot):
     runner.stop_userbot(uid, slot)
     db.remove_account(uid, slot)
     session_dir = f"data/sessions/{uid}/{slot}"
     shutil.rmtree(session_dir, ignore_errors=True)
 
-
 # ════════════════════════════════════════════════════════════════════════════════
-#   /support
+#   /support & Admin Controls
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1494,11 +1586,6 @@ async def cmd_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔹 /logout → /host — {italic_serif('Re-deploy karo')}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /supportraid (Premium)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_supportraid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_blocked(update): return
@@ -1519,11 +1606,6 @@ async def cmd_supportraid(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⚡ {fraktur('Raid Mode')}: {double_struck('MAX POWER')}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /restartall (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_restartall(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
@@ -1546,11 +1628,6 @@ async def cmd_restartall(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /refresh (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
-
 async def cmd_refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
     await update.message.reply_text(
@@ -1560,11 +1637,6 @@ async def cmd_refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🕒 {sans_bold('Uptime')}  : {mono(uptime_str())}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /sudolist (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_sudolist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
@@ -1607,11 +1679,6 @@ async def cmd_sudolist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /setdp (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
-
 async def cmd_setdp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
     if not update.message.reply_to_message or not update.message.reply_to_message.photo:
@@ -1629,11 +1696,6 @@ async def cmd_setdp(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"❌ {sans_bold('Failed')}: {mono(str(e)[:80])}",
             parse_mode=ParseMode.MARKDOWN,
         )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /block  /unblock  /blockeduser (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
@@ -1659,7 +1721,6 @@ async def cmd_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ Invalid ID.")
 
-
 async def cmd_unblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
     if not context.args:
@@ -1677,7 +1738,6 @@ async def cmd_unblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ Invalid ID.")
 
-
 async def cmd_blockeduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
     blocked = db.get_blocked()
@@ -1690,11 +1750,6 @@ async def cmd_blockeduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{lines}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /stats (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
@@ -1718,11 +1773,6 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /secretfunction (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
-
 async def cmd_secretfunction(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
     await update.message.reply_text(
@@ -1742,11 +1792,6 @@ async def cmd_secretfunction(update: Update, context: ContextTypes.DEFAULT_TYPE)
         f"🔺 {mono('/setbot')}              — {fraktur('ON/OFF Bot')}",
         parse_mode=ParseMode.MARKDOWN,
     )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-#   /setbot — ON/OFF Bot (Owner)
-# ════════════════════════════════════════════════════════════════════════════════
 
 async def cmd_setbot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await owner_only(update): return
@@ -1770,13 +1815,11 @@ async def cmd_setbot(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
     )
 
-
 # ════════════════════════════════════════════════════════════════════════════════
 #   CALLBACK QUERY HANDLER
 # ════════════════════════════════════════════════════════════════════════════════
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Check if bot is ON
     if not db.is_bot_on():
         await update.callback_query.answer("⚠️ Bot is currently OFF", show_alert=True)
         return
@@ -1786,12 +1829,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid  = update.effective_user.id
     data = query.data
 
-    # ── Cancel ───────────────────────────────────────────────────────────────
     if data == "cancel_action":
         await query.message.edit_text(f"🚫 {italic_serif('Cancelled.')}")
         return
 
-    # ── Broadcast menu — owner only ──────────────────────────────────────────
     if data == "broadcast_menu":
         if not is_owner(uid):
             await query.answer("🔒 Owner only", show_alert=True)
@@ -1807,7 +1848,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Settings menu — owner only ──────────────────────────────────────────
     if data == "settings_menu":
         if not is_owner(uid):
             await query.answer("🔒 Owner only", show_alert=True)
@@ -1832,7 +1872,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Toggle bot ────────────────────────────────────────────────────────────
     if data == "toggle_bot":
         if not is_owner(uid):
             await query.answer("🔒 Owner only", show_alert=True)
@@ -1847,22 +1886,18 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Back to start ─────────────────────────────────────────────────────────
     if data == "back_to_start":
         await cmd_start(update, context)
         return
 
-    # ── Commands — full list inline ──────────────────────────────────────────
     if data == "commands":
         await query.message.reply_text(SID_MASTER_MENU, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # ── Flow Menu — flow bot commands ────────────────────────────────────────
     if data == "flow_menu":
         await query.message.reply_text(SID_FLOW_BOT_MENU, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # ── Status — user's actual hosted accounts ───────────────────────────────
     if data == "status":
         accounts = db.get_accounts(uid)
         hosted   = [a for a in accounts if a.get("hosted")]
@@ -1900,7 +1935,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Logout from menu — show account selector ─────────────────────────────
     if data == "menu_logout":
         accounts = db.get_accounts(uid)
         hosted   = [a for a in accounts if a.get("hosted")]
@@ -1945,7 +1979,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # ── Support ───────────────────────────────────────────────────────────────
     if data == "support":
         await query.message.reply_text(
             f"{TOP}\n║  📞  {double_struck('Support Center')}  📞  ║\n{BOT}\n\n"
@@ -1963,7 +1996,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Help & Guide — step-by-step ──────────────────────────────────────────
     if data == "help":
         await query.message.reply_text(
             f"╔══════════════════════════════╗\n"
@@ -1992,12 +2024,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"➡️ {script('Dot')} {mono('.')} {script('se command likho:')}\n\n"
             f"    {mono('.alive')}  → {script('Bot alive check karo')}\n"
             f"    {mono('.ping')}   → {script('Speed check')}\n"
-            f"    {mono('.help')}   → {script('Poori command list')}\n"
-            f"    {mono('.attack')} → {script('Kisi pe reply karke attack')}\n"
-            f"    {mono('.roast')}  → {script('Kisi ko roast karo')}\n"
-            f"    {mono('.nuke')}   → ☢️ {script('Nuclear strike')}\n"
-            f"    {mono('.spray <text>')} → {script('Spam shuru')}\n"
-            f"    {mono('.stopspray')}    → {script('Spam band karo')}\n\n"
+            f"    {mono('.menu')}   → {script('Commands list')}\n"
+            f"    {mono('.attack')} → {script('Attack karo')}\n"
+            f"    {mono('.roast')}  → {script('Roast karo')}\n"
+            f"    {mono('.swipe')}  → {script('Swipe flood shuru')}\n\n"
             f"{'━'*30}\n"
             f"🔄 {sans_bold('STEP 4')} — {bold_serif('Manage Karo')}\n"
             f"{'━'*30}\n"
@@ -2007,19 +2037,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"    /logout     — {script('Logout karo')}\n"
             f"    /host       — {script('Naya account add karo')}\n\n"
             f"{'━'*30}\n"
-            f"⚠️ {sans_bold('IMPORTANT')}\n"
-            f"{'━'*30}\n"
-            f"🔸 {italic_serif('Sirf tumhara OWN account command chalayega')}\n"
-            f"🔸 {italic_serif('Kisi dusre ka message ignore hoga')}\n"
-            f"🔸 {italic_serif('Max')} {mono('3')} {italic_serif('accounts ek saath host ho sakte hain')}\n\n"
-            f"{'━'*30}\n"
             f"🌟 {bold_serif('Bot Owner')}: {SUPPORT_USERNAME}\n"
             f"⚡ {bold_serif('Powered by SIDxBOT')}",
             parse_mode=ParseMode.MARKDOWN,
         )
         return
 
-    # ── Restart account ──────────────────────────────────────────────────────
     if data.startswith("restart_acc_"):
         try:
             slot = int(data.split("_")[-1])
@@ -2047,7 +2070,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.edit_text(f"❌ {bold_serif('Restart Failed')}\n📩 {SUPPORT_USERNAME}")
         return
 
-    # ── Start (stopped) account ───────────────────────────────────────────────
     if data.startswith("start_acc_"):
         try:
             slot = int(data.split("_")[-1])
@@ -2075,7 +2097,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.edit_text(f"❌ {bold_serif('Start Failed')}\n📩 {SUPPORT_USERNAME}")
         return
 
-    # ── Logout account — show confirm prompt ─────────────────────────────────
     if data.startswith("logout_acc_"):
         try:
             slot = int(data.split("_")[-1])
@@ -2100,7 +2121,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Confirm logout ────────────────────────────────────────────────────────
     if data.startswith("confirm_logout_"):
         try:
             slot = int(data.split("_")[-1])
@@ -2119,7 +2139,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ── Add another account (same as /host entry) ─────────────────────────────
     if data == "add_acc":
         accounts = db.get_accounts(uid)
         hosted   = [a for a in accounts if a.get("hosted")]
@@ -2137,7 +2156,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode=ParseMode.MARKDOWN,
         )
         return
-
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   AUTO HEALTH CHECK
@@ -2157,7 +2175,6 @@ async def auto_health_check(context: ContextTypes.DEFAULT_TYPE):
                     uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
                     acct["session_string"], uid_str,
                 )
-
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   STARTUP & MAIN
@@ -2205,7 +2222,6 @@ async def post_init(application: Application):
         logger.info(f"[STARTUP] Auto-started {count} userbots.")
     else:
         logger.info("[STARTUP] Bot is OFF — skipping auto-start.")
-
 
 def main():
     if not BOT_TOKEN:  raise ValueError("BOT_TOKEN not set!")
