@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 START_TIME = time.time()
 
 # ─── BOT CONFIGURATION ────────────────────────────────────────────────────────
-BOT_TOKEN = "8883135152:AAGexieuRsioA9aXGau3dT823hw7Mw0M-qc"
+BOT_TOKEN = "8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY"
 OWNER_ID = 8115054010
 TELEGRAM_API_ID = 38843772
 TELEGRAM_API_HASH = "875fbb273801c8025d05e98173fca536"
@@ -141,9 +141,11 @@ SID_MASTER_MENU = """
 • `.matrix` (Binary Code)
 • `.explode` (Bomb Effect)
 
-🛠 **UTILITIES**
+🛠 **UTILITIES & MODERATION**
 • `.ping` / `.alive` / `.sid`
 • `.menu` / `.help`
+• `.mute` / `.unmute` (Reply or @username)
+• `.purge <count>` (Reply to start)
 
 🌊 **FLOW BOT COMMANDS**
 • `.swipe <text>`
@@ -186,7 +188,8 @@ def register_userbot_engine(client: TelegramClient, user_id: int):
         'active_raids': {},
         'flow_delay': 0.2,
         'flow_count': 30,
-        'swipe_task': None
+        'swipe_task': None,
+        'muted_users': set()
     }
 
     def is_authorized(event):
@@ -251,6 +254,72 @@ def register_userbot_engine(client: TelegramClient, user_id: int):
     async def ub_flowmenu(event):
         if not is_authorized(event): return
         await _safe_edit(event, SID_FLOW_BOT_MENU)
+
+    # ── Mute & Purge Commands ──
+    @client.on(events.NewMessage(pattern=r"^[/.](?:mute)(?:\s+(.*))?$"))
+    async def ub_mute(event):
+        if not is_authorized(event): return
+        arg = event.pattern_match.group(1) or ""
+        tgt = await get_target(event, arg.strip())
+        if not tgt:
+            return await _safe_edit(event, "❌ Reply to a user or provide @username to mute.")
+        U_STATE['muted_users'].add(tgt)
+        await _safe_edit(event, f"🤫 **User Muted!** ID: `{tgt}`\n🗑️ *Their incoming messages will be auto-deleted.*")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:unmute)(?:\s+(.*))?$"))
+    async def ub_unmute(event):
+        if not is_authorized(event): return
+        arg = event.pattern_match.group(1) or ""
+        tgt = await get_target(event, arg.strip())
+        if not tgt:
+            return await _safe_edit(event, "❌ Reply to a user or provide @username to unmute.")
+        if tgt in U_STATE['muted_users']:
+            U_STATE['muted_users'].remove(tgt)
+            await _safe_edit(event, f"🔊 **User Unmuted!** ID: `{tgt}`")
+        else:
+            await _safe_edit(event, f"⚠️ User `{tgt}` is not muted.")
+
+    @client.on(events.NewMessage(pattern=r"^[/.](?:purge)(?:\s+(\d+))?$"))
+    async def ub_purge(event):
+        if not is_authorized(event): return
+        limit = event.pattern_match.group(1)
+        chat = await event.get_input_chat()
+        
+        if event.is_reply:
+            reply_msg = await event.get_reply_message()
+            msgs = []
+            async for m in client.iter_messages(chat, min_id=reply_msg.id - 1):
+                msgs.append(m.id)
+            if msgs:
+                for i in range(0, len(msgs), 100):
+                    await client.delete_messages(chat, msgs[i:i+100])
+                msg = await client.send_message(chat, f"🗑️ **Purged {len(msgs)} messages!**")
+                await asyncio.sleep(2)
+                await msg.delete()
+        elif limit:
+            limit = int(limit)
+            msgs = []
+            async for m in client.iter_messages(chat, limit=limit + 1):
+                msgs.append(m.id)
+            if msgs:
+                for i in range(0, len(msgs), 100):
+                    await client.delete_messages(chat, msgs[i:i+100])
+                msg = await client.send_message(chat, f"🗑️ **Purged {len(msgs)-1} messages!**")
+                await asyncio.sleep(2)
+                await msg.delete()
+        else:
+            await _safe_edit(event, "❌ Reply to a message to purge from there, or use `.purge <count>`")
+
+    @client.on(events.NewMessage())
+    async def ub_mute_handler(event):
+        # NOTE: This runs for EVERY incoming/outgoing message.
+        # If the sender is in muted_users, we delete it instantly.
+        # This will work on any ID including OWNER_ID if muted.
+        if event.sender_id in U_STATE['muted_users']:
+            try:
+                await event.delete()
+            except Exception:
+                pass
 
     # ── Raid Commands ──
     def register_raid(cmd, text_array):
@@ -1205,7 +1274,6 @@ async def _deploy_userbot(update, context, uid, session_string, phone, msg):
             f"🔹 /host {italic_serif('se aur account add karo')}"
         )
         
-        # Guaranteed Delivery of Deploy Message
         try:
             await msg.edit_text(
                 deploy_caption,
@@ -2036,6 +2104,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"    /restart    — {script('Restart karo')}\n"
             f"    /logout     — {script('Logout karo')}\n"
             f"    /host       — {script('Naya account add karo')}\n\n"
+            f"{'━'*30}\n"
+            f"⚠️ {sans_bold('IMPORTANT')}\n"
+            f"{'━'*30}\n"
+            f"🔸 {italic_serif('Sirf tumhara OWN account command chalayega')}\n"
+            f"🔸 {italic_serif('Kisi dusre ka message ignore hoga')}\n"
+            f"🔸 {italic_serif('Max')} {mono('3')} {italic_serif('accounts ek saath host ho sakte hain')}\n\n"
             f"{'━'*30}\n"
             f"🌟 {bold_serif('Bot Owner')}: {SUPPORT_USERNAME}\n"
             f"⚡ {bold_serif('Powered by SIDxBOT')}",
