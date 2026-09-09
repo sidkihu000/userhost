@@ -1,1411 +1,2059 @@
-# -*- coding: utf-8 -*-
+# ════════════════════════════════════════════════════════════════
+    #   HOSTER BOT CODE (MERGED WITH SID MASTER & FLOW BOT ENGINE)
+    # ════════════════════════════════════════════════════════════════
+
+    import asyncio
+    import logging
+    import os
+    import time
+    import shutil
+    import random
+    from io import BytesIO
+    from telegram import (
+        Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+    )
+    from telegram.ext import (
+        Application, CommandHandler, MessageHandler, ConversationHandler,
+        CallbackQueryHandler, ContextTypes, filters
+    )
+    from telegram.constants import ParseMode
+    from telethon import TelegramClient, events
+    from telethon.sessions import StringSession
+    from telethon.errors import (
+        SessionPasswordNeededError, PhoneCodeExpiredError,
+        PhoneCodeInvalidError, FloodWaitError
+    )
+
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logging.INFO,
+    )
+    logger = logging.getLogger(__name__)
+
+    START_TIME = time.time()
+    MAX_ACCOUNTS_PER_USER = 3   # max accounts one user can host
+
+    # ─── CONVERSATION STATES ──────────────────────────────────────────────────────
+    ASK_PHONE, ASK_CODE, ASK_2FA = range(3)
+    pending_logins: dict = {}
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   SID MASTER: RAID ARRAYS & ANIMATION TEXTS
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    RAPIST_MESSAGES = [
+        "Gᴜʟᴀᴍɪ ᴋʀ ——➤(🎀)", "Tᴇʀɪ Mᴀ Cʜᴜᴅɪ ——➤(🎀)", "Sᴀʟᴀᴍ Tʜᴏᴋ ——➤(🎀)", "Cʜɪɴᴀᴀʀ ——➤(🎀)",
+        "Mᴀᴢᴅᴏᴏʀ ——➤(🎀)", "Hᴀᴡᴀʙᴀᴢᴢ ——➤(🎀)", "𝐃ɪᴘᴇsʜ अब्बू  ʙᴏʟ——➤(🎀)", "Tmkl ——➤(🎀)",
+        "Kᴀᴍᴢᴏʀ Kᴜᴛɪʏᴀ ——➤(🎀)", "Bʜᴇᴇᴋ Mᴀɴɢ ——➤(🎀)", "RɴᴅɪMᴏɴ ——➤(🎀)", "Cʜᴜᴅᴀɪ Kɪᴅᴅᴇ ——➤(🎀)",
+        "Gʜᴀᴛɪʏᴀ Bᴇᴛᴀ ——➤(🎀)", "Tᴇʀᴀ Bᴀᴀᴘ x𝐃ɪᴘᴇsʜ ——➤(🎀)", "GAɴᴅ Mᴀʀᴀ ᴍᴜʟʟᴇ ——➤(🎀)",
+        "Cʜᴜᴅᴇɢɪ Tᴇʀɪ MA ——➤(🎀)", "BɪᴛCʜ ——➤(🎀)", "HɪJᴅᴜSᴏɴ ——➤(🎀)", "Nᴀʟɪ Sᴀғ Kᴀʀ ᴊAᴋᴇ ——➤(🎀)",
+        "GʜɪNᴏɴɪ Rɴ Dz ——➤(🎀)", "Cʜᴏᴛɪ Jᴀᴀᴛ ——➤(🎀)", "TᴇRɪ Mᴀ Kalwɪ ——➤(🎀)", "HɪJᴀB PᴇʜᴇN ——➤(🎀)", "Tᴍᴋc Mᴇ KᴏYʟA ——➤(🎀)"
+    ]
+
+    HOMIES_MESSAGES = [
+        "𝐑𝐄𝐁𝐄𝐋 𝐁𝐀𝐀𝐏 👑", "𝐀𝐊𝐒𝐇𝐔 𝐊𝐄𝐍𝐆 🔥", "𝐃𝐈𝐏𝐄𝐒𝐇 𝐆𝐀𝐖𝐃 😈", "𝐒𝐈𝐃 𝐑𝐔𝐋𝐄 𝐒𝐄𝐑𝐕𝐄𝐑 😎",
+        "𝐀𝐑𝐘𝐀𝐍 पिताश्री 😇", "𝐃𝐄𝐀𝐃𝐋𝐘 𝐌𝐀𝐑𝐂𝐎 💀", "𝐒𝐇𝐈𝐕 𝐁𝐁𝐔  💥", "𝐁𝐇𝐀𝐕𝐈𝐒𝐇𝐘𝐀 𝐒𝐇𝐄𝐑𝐑 🦁",
+        "𝐆𝐎𝐃 𝐀𝐑𝐄𝐒 🛐", "𝐍𝐈𝐒𝐇𝐀𝐍𝐓 𝐁𝐀𝐃𝐃𝐈𝐄 🎀", "𝐏𝐎𝐒𝐄𝐈𝐃𝐎𝐍 𝐓𝐇𝐄 𝐆𝐑𝐄𝐀𝐓 🌚", "𝐌𝐈𝐊𝐄𝐘 𝐌𝐔𝐓𝐇𝐌𝐀𝐑𝐄 ✊🏻💦",
+        "𝐌𝐔𝐙𝐀𝐍 𝐏𝐀𝐈👺", "𝐒𝐏𝐀𝐍𝐂𝐄𝐑 𝐆𝐎𝐀𝐓 🐐", "𝐑𝐄𝐗𝐗𝐘 𝐁𝐈𝐇𝐀𝐑𝐈 😈💪🏻", "𝐃𝐎𝐌𝐀 𝐏𝐀𝐇𝐀𝐃𝐈 🏳️‍🌈",
+        "𝐀𝐁𝐇𝐈 𝐁𝐇𝐀𝐈 💋", "𝐕𝐀𝐈𝐁𝐇𝐀𝐕 𝐁𝐇𝐀𝐈 💋", "𝐘𝐀𝐒𝐇 𝐂𝐇𝐇𝐀𝐊𝐀 👌🏻🎀"
+    ]
+
+    DIPESH_MESSAGES = [
+        "Teri ma Kali randy 💔🦋", "Chal Ma Chuda mere se 🖕", "Chal 𝐃ɪᴘᴇsʜ ko Baap Bol",
+        "Teri ma mar du randyke 😂🦋", "KHAKE BURGUR TERI MA CHODU GHAR GHAR", "BAAP BOL MUJHE GAREEB",
+        "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝑒𝒉𝑒😂",
+        "Tᴇʀᴀ ʙᴀᴀᴘ Sᴛᴀᴛɪᴏɴ Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵𝘪𝘺𝘢 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
+        "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂𝒏𝒈𝒊 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
+        "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜᴇ MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ Tᴇʀɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
+        "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ Tᴇʀɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
+        "Teri Maa Ke भोसड़े में Theater Kholke सैयारा चाला दूंगा 🔈🔈🔥🔥🔥🔥😂😂😂🔈🔈🔈",
+        "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱᵏʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ Tᴇʀɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
+        "𝐓𝐔 𝐈𝐃𝐑 𝐂𝐎𝐌𝐄𝐁𝐀𝐂𝐊 𝐃𝐄𝐓𝐀 𝐑𝐄𝐇 𝐆𝐘𝐀 𝐔𝐃𝐇𝐑 𝐃ɪᴘᴇsʜ 𝐓ᴇʀ𝐈 𝐌ᴀA 𝐂ʜᴏᴅ 𝐆ʏA 🩷🩶🩵", "Choding ho rhi hai teri maa ki 😬👨🏻‍💻🔥",
+        "Teri Maa Ki Chut Mein Loda Daluga Beta 🥵💯", "🧐 Teri maa ka bh🤪sda dikh rha hai 😎",
+        " 😉🔥 Cya 😉🔥 re 😉 🔥 sapri 😉🔥 try 😉🔥 maa 😉🔥 tujh 😉🔥 nehlati 😉🔥 ny 😉🔥 ey 😉🔥 Cya 😉🔥",
+        " Oye Madarchod Uth 😤😡🥵 Teri Maa Ka Choding Tem 😈👻🦶🏻", " Teri Maa Ko Football ⚽ bnake uske 𝗕𝗛😈𝗦𝗗𝗘 pe laat 🦶🏻 marunga 🤩🔥",
+        "इस मंगलवार को ᴛᴇʀɪ ᴍᴀᴀ ᴋɪ ᴄʜᴜᴛ ᴋᴀ ʙʜᴀɴᴅᴀʀᴀ ʜᴏɢᴀ 😈😘👌🏻", " TᗴᖇI ᗰᗩᗩ Kᗩ ᗷOOᖇ ᗷᗴTᗩ 🤣🤮🔥😏🔥😂💞🌧️",
+        "𝐌𝐀𝐀 𝐊𝐄 𝐋𝐎𝐃𝐄 🤮", "𝗣𝗘𝗛𝗟𝗘 𝗧𝗘𝗥𝗜 𝗕𝗘𝗛𝗘𝗡 𝗖𝗛𝗢𝗗𝗨𝗚𝗔 𝗙𝗜𝗥 𝗧𝗘𝗥𝗜 𝗠𝗔A 😆😂😆🔥🤢😂🤍😤",
+        "ƇӇƲƤ ƬЄƦƖ Mƛƛ Ƙƛ ƁӇƠƧƊƛ ♻️", " 𝘚𝘱𝘢𝘮𝘮𝘦𝘳 𝘣𝘢𝘯𝘦𝘨𝘢 𝘳𝘢𝘯𝘥𝘪𝘬𝘦 🤢🔥", " 𝐀𝐉𝐀 𝐌🇨 𝐁𝐀𝐍𝐀𝐔 𝐓𝐔𝐉𝐇𝐄 𝐒𝐏𝐀𝐌𝐌𝐄𝐑 👻💥🤍😹👑",
+        "𝘣𝘰𝘭 𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 की जय 👑", " 😍 Teri 😡 Randi 🤪 Maa 😤 Ko 😎 Pel 😭 Dunga 😍",
+        "Idhar Aa Beta 🤪💔 Teri Maa Chodu 😂😘", " Oye Mazdur kaam pe ja 🔥⛏️🔥⛏️⛏️🔥⛏️💞💞🔥💞⛏️🔥💞⛏️⛏️",
+        "Teri Maa Chodne K liye Pura Gc Khada Hai 🥴😁🩷💯", " Teri Maa Bio Mein #Proudrandi 💔🥀 likhti hai 🤩🔥🩷",
+        "Rndyk lund se utr 😩👏🏻", "Arey Yarr Apni Maa Matt Nangi Kar 😩🔥💞😩⛏️🔥🥀🤩💞😩🔥😩🩷💞",
+        " Tu hasta reh gya yaaro mein 😁💯💔 Teri maa chudgyi baazaro mein 😂🌹",
+        "Teri Maa Chudwa denge re 🪖🔥⛏️🥴🤪💔🩷💯😁😩💞", " 🩷 Gud ❤️ nyt 🧡 rndyk 💛 kal 🩵 Aaunga 💙 Teri 🖤 Maa 🩶 Chodne 🤍",
+        " 🥶 Are 😱 Mc 😩 Ye 🤔 Kaise 🤪 Kiya 😏 Teri 😎 Maa 😬 Randi 🙄 Hai 🤮 100% 😂",
+        "🩷🩵🤍🩶🖤❤️💚 Ye sare dill teri maa k naam beta 😂😜🔥", " Hat peche hat tera baap Rebel aya 😂😂🥴😹🤲🏻💪🏻",
+        "Leave le rndyk psnd nai aya tu meko 🤢👎🏻", "Teri maa chodu 💯 if yes then reply to my message 💀💀💀💪🏻🔥💯👆🏻💔😂😂💔💔💔",
+        "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
+        "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐀 😂🪄😂🪄",
+        " Teri Maa Ko बाहुबली style mein chodunga 🥶💔🤪😹", "Tumhare Pitashree 𝐃ɪᴘᴇsʜ 💯🔥🗿🌙",
+        " Tery behn bole fuck me 𝐃ɪᴘᴇsʜ daddy 😍🌹💋", " तेरी माँ 𝐃ɪᴘᴇsʜ पापा ki दीवानी Since 2k10 😂🖕🏻🔥", " Cover le सस्ती रंडी k काले बच्चे 🤢🤮🖕🏻🥀"
+    ]
+
+    ATTACK_LIST = ["⚔️ Teri aukat nahi mujhse ladhne ki randike 😂🔥", "💥 Chal bhaag yahan se chutiye warna maar khayega 🤣⚔️", "🗡️ Tera baap aaya hai sunta nahi kya 👑😈"]
+    ROAST_LIST = ["🔥 Teri zindagi ek bakwas webseries ki tarah hai — 1 season mein flop 😂📺", "🤣 Bhai teri personality ek sada hua pyaz jaisi hai — khole toh aansu aaye 🧅💀", "😹 Tu itna bura lagta hai ke teri photo dekh ke mosquito bhi bhaag jata hai 🦟😂"]
+    DISS_LIST = ["🎤 Tera naam sun ke log mute kar dete hain khud ko 🔇😂", "💀 Tu diss kar raha hai — khud ko diss kar pehle 🪞😹", "🎙️ Teri rap jaisi hai — no flow no bars no future 🎵😂"]
+    WAR_LIST = ["⚔️ War shuru ho gayi — aur tu pehle hi haar gaya 😂🔥", "💣 Bhai main war mein nahi aata — main war khatam karne aata hoon 😈⚡", "🏴‍☠️ Tera jhanda uraya — apna wala lehraya 😎💀"]
+    SAVAGE_LIST = ["😈 Main savage hoon — tujhe explanation nahi deta 🔥💀", "💀 Teri feelings mere liye statistics hain — irrelevant 😂😈", "🔥 Main woh nahi hoon jo tujhe comfortable feel karaaye 😎💀"]
+
+    HACK_ANIMATION = [
+        "💻 `Initializing SID Exploit Script...`",
+        "💻 `Connecting to Target's Local IP...`",
+        "💻 `Bypassing Security Firewalls... [▓▓░░░░]`",
+        "💻 `Extracting Database... [▓▓▓▓▓░]`",
+        "💻 `Decrypting Mainframe... [▓▓▓▓▓▓]`",
+        "👑 **HACK COMPLETE!**\n» System Compromised. Target Destroyed. 😈"
+    ]
+    LOAD_BAR_FRAMES = ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"]
+    EXPLODE_ANIMATION = ["💣 `3...`", "💣 `2...`", "💣 `1...`", "💥 **BOOOOOOOOM** 💥"]
+    HEART_ANIMATION = ["🤍", "🩷", "💖", "💗", "💓", "💞", "💕"]
+
+    SID_MASTER_MENU = """
+===================================
+       👑 **SID MASTER MENU** 👑
+===================================
+🔥 **RAID COMMANDS**
+• `.attack` / `.sattack` (Stop)
+• `.roast` / `.sroast`
+• `.rebel` / `.srebel`
+• `.sid` / `.ssid`
+• `.homies` / `.shomies`
+
+🚀 **POWER SPAM COMMANDS**
+• `.spam <count> <text>`
+• `.mixspam <count>`
+
+✨ **ANIMATIONS & EFFECTS**
+• `.hack` (Terminal Hack)
+• `.load` (Progress Bar)
+• `.magic` (Text Reveal)
+• `.heart` (Love Burst)
+• `.matrix` (Binary Code)
+• `.explode` (Bomb Effect)
+• `.typing [text]`
+
+🛠 **UTILITIES**
+• `.song [name]` (YT Download)
+• `.qr [text]` (Generate QR)
+• `.tts [text]` (Voice note)
+• `.copy [reply]` / `.back` (Clone)
+• `.ping` / `.alive` / `.sid`
+
+🛑 **ADMIN / CONTROL**
+• `.mute` / `.unmute`
+• `.safe` / `.unsafe`
+• `.purge` (Reply to start)
+
+===================================
+ Powered by SID Core v6.0-DYNAMIC
+==================================="""
+
+    SID_FLOW_BOT_MENU = """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      💖  SID BEBO FLOW BOT  💖
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🌊 This is the high‑speed flow engine.
+  Use `.swipe` to start a swipe flood.
+
+【 🌊 𝗙𝗟𝗢𝗪 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦 】
+  ✦ .swipe <text>           → swipe with custom text
+  ✦ .swipe                  → swipe using default texts
+  ✦ .stopswipe              → stop swipe flood
+
+【 🚀 𝗙𝗟𝗢𝗪 𝗦𝗣𝗘𝗘𝗗 】
+  ✦ .flowdelay <seconds>    → set delay between messages
+  ✦ .flowcount <n>          → set number of messages per swipe
+
+【 💡 𝗧𝗜𝗣 】
+  Swipe uses the powerful text library from SID BEBO.
+  You can also add your own texts with `.addtext`.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       💖  SID BEBO — 𝗙𝗹𝗼𝘄 𝘄𝗶𝘁𝗵 𝗣𝗼𝘄𝗲𝗿
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-================================━━━━━━━━================================
-                 ✨ SID PREMIUM MASTER USERBOT ENGINE ✨
-================================━━━━━━━━================================
-Core Architecture: pyTelegramBotAPI (Hoster) + Telethon (Live Runtimes)
-Features: OTP/2FA, Dynamic Animations, Spam Commands, Full Raid Integrated
-Multi-Account Support with Slots, Performance Optimizations
-"""
 
-import os
-import sys
-import time
-import json
-import logging
-import sqlite3
-import asyncio
-import atexit
-import psutil
-import threading
-import random
-import shutil
-import re
-import secrets
-from datetime import datetime
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   SID FLOW BOT: ENGINE METHODS (EXTRACTED)
+    # ════════════════════════════════════════════════════════════════════════════════
+    # Import this wrapper into your runner.py to instantly apply all Flow Bot Logic 
+    # to your Telethon clients.
+    
+    def register_flow_bot_methods(client: TelegramClient, saved_texts: list = None, all_texts: list = None):
+        """
+        Attaches the high-speed Flow Bot methods (.swipe, .flowdelay, etc.) to a Telethon client.
+        """
+        flow_logger = logging.getLogger("FlowBotEngine")
+        
+        # State variables scoped to this instance
+        flow_mode = True
+        flow_delay = 0.2
+        flow_count = 30
+        swipe_task = None
+        
+        _saved_texts = saved_texts or []
+        _all_texts = all_texts or ["🌊 Flow Bot Swipe Flood initiated!"]
 
-import telebot
-from telebot import types
-from flask import Flask, request, jsonify
-from threading import Thread
+        def flow_command(cmd):
+            def decorator(func):
+                @client.on(events.NewMessage(pattern=f"^[/.]{cmd}(?:\\b|$)"))
+                async def handler(event):
+                    if not flow_mode:
+                        await event.reply("❌ Flow bot is OFF.")
+                        return
+                    try:
+                        await func(event)
+                    except Exception as e:
+                        flow_logger.error(f"Error in /{cmd}: {e}", exc_info=True)
+                        await event.reply(f"❌ Error: {e}")
+                return handler
+            return decorator
 
-# Userbot Dependencies
-try:
-    import yt_dlp
-    import qrcode
-    from gtts import gTTS
-    import requests
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "yt-dlp", "qrcode", "gTTS", "requests"])
-    import yt_dlp
-    import qrcode
-    from gtts import gTTS
-    import requests
+        @flow_command("swipe")
+        async def cmd_swipe(event):
+            nonlocal swipe_task
+            args = event.raw_text.split(maxsplit=1)
+            
+            if len(args) > 1:
+                text = args[1]
+                await event.reply(f"🌊 Swiping with custom text: {text[:30]}...")
+            else:
+                if _saved_texts:
+                    text = random.choice(_saved_texts)
+                else:
+                    text = random.choice(_all_texts)
+                await event.reply(f"🌊 Swiping with random text.")
+                
+            chat = event.chat
+            if swipe_task and not swipe_task.done():
+                swipe_task.cancel()
+                
+            swipe_task = asyncio.create_task(swipe_loop(event, chat, text))
+            await event.reply(f"✅ Swipe started! {flow_count} messages with delay {flow_delay}s. Use .stopswipe to stop.")
 
-import telethon
-from telethon import TelegramClient, events
-from telethon.errors import (
-    SessionPasswordNeededError, PhoneCodeInvalidError,
-    PasswordHashInvalidError, PhoneCodeExpiredError, FloodWaitError
-)
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.functions.photos import UploadProfilePhotoRequest, DeletePhotosRequest
-from telethon.tl.types import ChatAdminRights
-from telethon.sessions import StringSession
+        @flow_command("stopswipe")
+        async def cmd_stopswipe(event):
+            nonlocal swipe_task
+            if swipe_task and not swipe_task.done():
+                swipe_task.cancel()
+                await event.reply("✅ Swipe stopped.")
+            else:
+                await event.reply("ℹ️ No active swipe.")
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SYSTEM LOGGING & PATHS
-# ──────────────────────────────────────────────────────────────────────────────
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - [SID-ENGINE] - %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
-logger = logging.getLogger("SidHostMaster")
+        @flow_command("flowdelay")
+        async def cmd_flowdelay(event):
+            nonlocal flow_delay
+            args = event.raw_text.split(maxsplit=1)
+            if len(args) < 2:
+                return await event.reply(f"ℹ️ Current flow delay: {flow_delay}s")
+            try:
+                new_delay = float(args[1])
+                if new_delay < 0.05:
+                    return await event.reply("⚠️ Delay too small, min 0.05s")
+                flow_delay = new_delay
+                await event.reply(f"✅ Flow delay set to {flow_delay}s")
+            except ValueError:
+                await event.reply("⚠️ Invalid delay.")
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-RUNTIMES_DIR = os.path.join(BASE_DIR, 'sid_runtimes')
-DATA_STORAGE_DIR = os.path.join(BASE_DIR, 'sid_metadata')
-DATABASE_PATH = os.path.join(DATA_STORAGE_DIR, 'sid_hosting.db')
+        @flow_command("flowcount")
+        async def cmd_flowcount(event):
+            nonlocal flow_count
+            args = event.raw_text.split(maxsplit=1)
+            if len(args) < 2:
+                return await event.reply(f"ℹ️ Current flow count: {flow_count}")
+            try:
+                new_count = int(args[1])
+                if new_count < 1:
+                    return await event.reply("⚠️ Count must be >= 1")
+                flow_count = new_count
+                await event.reply(f"✅ Flow count set to {flow_count}")
+            except ValueError:
+                await event.reply("⚠️ Invalid count.")
 
-os.makedirs(RUNTIMES_DIR, exist_ok=True)
-os.makedirs(DATA_STORAGE_DIR, exist_ok=True)
+        async def swipe_loop(event, chat, text):
+            nonlocal swipe_task
+            try:
+                for _ in range(flow_count):
+                    if not flow_mode:
+                        break
+                    try:
+                        await client.send_message(chat, text)
+                    except Exception as e:
+                        flow_logger.error(f"Swipe send error: {e}")
+                    await asyncio.sleep(flow_delay)
+            except asyncio.CancelledError:
+                pass
+            finally:
+                swipe_task = None
+                if flow_mode:
+                    await event.reply("✅ Swipe finished.")
 
-# ──────────────────────────────────────────────────────────────────────────────
-# WEB LAYER & CONSTANTS
-# ──────────────────────────────────────────────────────────────────────────────
-web_app = Flask('SidHostServer')
 
-@web_app.route('/')
-def health_check(): return "<h3>Sid Engine Core Status: ONLINE 🟢</h3>", 200
-def initialize_keepalive_server(): web_app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   FONT STYLES
+    # ════════════════════════════════════════════════════════════════════════════════
 
-BOT_TOKEN = '8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY'
-DEFAULT_API_ID = 32082988
-DEFAULT_API_HASH = "a81844a473550947cfff864a8c7489cd"
+    def bold_serif(t: str) -> str:
+        result = ""
+        for c in t:
+            if 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D400)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D41A)
+            elif '0' <= c <= '9': result += chr(ord(c) - ord('0') + 0x1D7CE)
+            else: result += c
+        return result
 
-BOY_PRESETS = ["SID KENG 👑", "DEADLY SID 💀", "REBEL SID 🔥", "SID RULE SERVER 😎"]
-GIRL_PRESETS = ["SID BADDIE 🎀", "ANGEL SID ✨", "ROSE SID 🌸", "CUTE SID 💅🏻"]
+    def italic_serif(t: str) -> str:
+        special = {'h': '𝒽', 'e': '𝑒', 'i': '𝑖', 'j': '𝑗'}
+        result = ""
+        for c in t:
+            if c in special: result += special[c]
+            elif 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D434)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D44E)
+            else: result += c
+        return result
 
-# ─── FULL RAID TEXT ARRAYS ───
-RAPIST_MESSAGES = [
-    "Gᴜʟᴀᴍɪ ᴋʀ ——➤(🎀)", "Tᴇʀɪ Mᴀ Cʜᴜᴅɪ ——➤(🎀)", "Sᴀʟᴀᴍ Tʜᴏᴋ ——➤(🎀)", "Cʜɪɴᴀᴀʀ ——➤(🎀)",
-    "Mᴀᴢᴅᴏᴏʀ ——➤(🎀)", "Hᴀᴡᴀʙᴀᴢᴢ ——➤(🎀)", "𝐃ɪᴘᴇsʜ अब्बू  ʙᴏʟ——➤(🎀)", "Tmkl ——➤(🎀)",
-    "Kᴀᴍᴢᴏʀ Kᴜᴛɪʏᴀ ——➤(🎀)", "Bʜᴇᴇᴋ Mᴀɴɢ ——➤(🎀)", "RɴᴅɪMᴏɴ ——➤(🎀)", "Cʜᴜᴅᴀɪ Kɪᴅᴅᴇ ——➤(🎀)",
-    "Gʜᴀᴛɪʏᴀ Bᴇᴛᴀ ——➤(🎀)", "Tᴇʀᴀ Bᴀᴀᴘ x𝐃ɪᴘᴇsʜ ——➤(🎀)", "GAɴᴅ Mᴀʀᴀ ᴍᴜʟʟᴇ ——➤(🎀)",
-    "Cʜᴜᴅᴇɢɪ Tᴇʀɪ MA ——➤(🎀)", "BɪᴛCʜ ——➤(🎀)", "HɪJᴅᴜSᴏɴ ——➤(🎀)", "Nᴀʟɪ Sᴀғ Kᴀʀ ᴊAᴋᴇ ——➤(🎀)",
-    "GʜɪNᴏɴɪ Rɴ Dz ——➤(🎀)", "Cʜᴏᴛɪ Jᴀᴀᴛ ——➤(🎀)", "TᴇRɪ Mᴀ Kalwɪ ——➤(🎀)", "HɪJᴀB PᴇʜᴇN ——➤(🎀)", "Tᴍᴋc Mᴇ KᴏYʟA ——➤(🎀)"
-]
+    def script(t: str) -> str:
+        result = ""
+        for c in t:
+            if 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D4D0)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D4EA)
+            else: result += c
+        return result
 
-HOMIES_MESSAGES = [
-    "𝐑𝐄𝐁𝐄𝐋 𝐁𝐀𝐀𝐏 👑", "𝐀𝐊𝐒𝐇𝐔 𝐊𝐄𝐍𝐆 🔥", "𝐃𝐈𝐏𝐄𝐒𝐇 𝐆𝐀𝐖𝐃 😈", "𝐒𝐈𝐃 𝐑𝐔𝐋𝐄 𝐒𝐄𝐑𝐕𝐄𝐑 😎",
-    "𝐀𝐑𝐘𝐀𝐍 पिताश्री 😇", "𝐃𝐄𝐀𝐃𝐋𝐘 𝐌𝐀𝐑𝐂𝐎 💀", "𝐒𝐇𝐈𝐕 𝐁𝐁𝐔  💥", "𝐁𝐇𝐀𝐕𝐈𝐒𝐇𝐘𝐀 𝐒𝐇𝐄𝐑𝐑 🦁",
-    "𝐆𝐎𝐃 𝐀𝐑𝐄𝐒 🛐", "𝐍𝐈𝐒𝐇𝐀𝐍𝐓 𝐁𝐀𝐃𝐃𝐈𝐄 🎀", "𝐏𝐎𝐒𝐄𝐈𝐃𝐎𝐍 𝐓𝐇𝐄 𝐆𝐑𝐄𝐀𝐓 🌚", "𝐌𝐈𝐊𝐄𝐘 𝐌𝐔𝐓𝐇𝐌𝐀𝐑𝐄 ✊🏻💦",
-    "𝐌𝐔𝐙𝐀𝐍 𝐏𝐀𝐈👺", "𝐒𝐏𝐀𝐍𝐂𝐄𝐑 𝐆𝐎𝐀𝐓 🐐", "𝐑𝐄𝐗𝐗𝐘 𝐁𝐈𝐇𝐀𝐑𝐈 😈💪🏻", "𝐃𝐎𝐌𝐀 𝐏𝐀𝐇𝐀𝐃𝐈 🏳️‍🌈",
-    "𝐀𝐁𝐇𝐈 𝐁𝐇𝐀𝐈 💋", "𝐕𝐀𝐈𝐁𝐇𝐀𝐕 𝐁𝐇𝐀𝐈 💋", "𝐘𝐀𝐒𝐇 𝐂𝐇𝐇𝐀𝐊𝐀 👌🏻🎀"
-]
+    def double_struck(t: str) -> str:
+        special_map = {'C': 'ℂ', 'H': 'ℍ', 'N': 'ℕ', 'P': 'ℙ', 'Q': 'ℚ', 'R': 'ℝ', 'Z': 'ℤ'}
+        result = ""
+        for c in t:
+            if c in special_map: result += special_map[c]
+            elif 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D538)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D552)
+            elif '0' <= c <= '9': result += chr(ord(c) - ord('0') + 0x1D7D8)
+            else: result += c
+        return result
 
-DIPESH_MESSAGES = [
-    "Teri ma Kali randy 💔🦋", "Chal Ma Chuda mere se 🖕", "Chal 𝐃ɪᴘᴇsʜ ko Baap Bol",
-    "Teri ma mar du randyke 😂🦋", "KHAKE BURGUR TERI MA CHODU GHAR GHAR", "BAAP BOL MUJHE GAREEB",
-    "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝑒𝒉𝑒😂",
-    "Tᴇʀᴀ ʙᴀᴀᴘ Sᴛᴀᴛɪᴏɴ Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵𝘪𝘺𝘢 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
-    "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂𝒏𝒈𝒊 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
-    "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜᴇ MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ Tᴇʀɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
-    "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ Tᴇʀɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
-    "Teri Maa Ke भोसड़े में Theater Kholke सैयारा चाला दूंगा 🔈🔈🔥🔥🔥🔥😂😂😂🔈🔈🔈",
-    "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱᵏʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ Tᴇʀɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
-    "𝐓𝐔 𝐈𝐃𝐑 𝐂𝐎𝐌𝐄𝐁𝐀𝐂𝐊 𝐃𝐄𝐓𝐀 𝐑𝐄𝐇 𝐆𝐘𝐀 𝐔𝐃𝐇𝐑 𝐃ɪᴘᴇsʜ 𝐓ᴇʀ𝐈 𝐌ᴀA 𝐂ʜᴏᴅ 𝐆ʏA 🩷🩶🩵", "Choding ho rhi hai teri maa ki 😬👨🏻‍💻🔥",
-    "Teri Maa Ki Chut Mein Loda Daluga Beta 🥵💯", "🧐 Teri maa ka bh🤪sda dikh rha hai 😎",
-    " 😉🔥 Cya 😉🔥 re 😉 🔥 sapri 😉🔥 try 😉🔥 maa 😉🔥 tujh 😉🔥 nehlati 😉🔥 ny 😉🔥 ey 😉🔥 Cya 😉🔥",
-    " Oye Madarchod Uth 😤😡🥵 Teri Maa Ka Choding Tem 😈👻🦶🏻", " Teri Maa Ko Football ⚽ bnake uske 𝗕𝗛😈𝗦𝗗𝗘 pe laat 🦶🏻 marunga 🤩🔥",
-    "इस मंगलवार को ᴛᴇʀɪ ᴍᴀᴀ ᴋɪ ᴄʜᴜᴛ ᴋᴀ ʙʜᴀɴᴅᴀʀᴀ ʜᴏɢᴀ 😈😘👌🏻", " TᗴᖇI ᗰᗩᗩ Kᗩ ᗷOOᖇ ᗷᗴTᗩ 🤣🤮🔥😏🔥😂💞🌧️",
-    "𝐌𝐀𝐀 𝐊𝐄 𝐋𝐎𝐃𝐄 🤮", "𝗣𝗘𝗛𝗟𝗘 𝗧𝗘𝗥𝗜 𝗕𝗘𝗛𝗘𝗡 𝗖𝗛𝗢𝗗𝗨𝗚𝗔 𝗙𝗜𝗥 𝗧𝗘𝗥𝗜 𝗠𝗔A 😆😂😆🔥🤢😂🤍😤",
-    "ƇӇƲƤ ƬЄƦƖ Mƛƛ Ƙƛ ƁӇƠƧƊƛ ♻️", " 𝘚𝘱𝘢𝘮𝘮𝘦𝘳 𝘣𝘢𝘯𝘦𝘨𝘢 𝘳𝘢𝘯𝘥𝘪𝘬𝘦 🤢🔥", " 𝐀𝐉𝐀 𝐌🇨 𝐁𝐀𝐍𝐀𝐔 𝐓𝐔𝐉𝐇𝐄 𝐒𝐏𝐀𝐌𝐌𝐄𝐑 👻💥🤍😹👑",
-    "𝘣𝘰𝘭 𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 की जय 👑", " 😍 Teri 😡 Randi 🤪 Maa 😤 Ko 😎 Pel 😭 Dunga 😍",
-    "Idhar Aa Beta 🤪💔 Teri Maa Chodu 😂😘", " Oye Mazdur kaam pe ja 🔥⛏️🔥⛏️⛏️🔥⛏️💞💞🔥💞⛏️🔥💞⛏️⛏️",
-    "Teri Maa Chodne K liye Pura Gc Khada Hai 🥴😁🩷💯", " Teri Maa Bio Mein #Proudrandi 💔🥀 likhti hai 🤩🔥🩷",
-    "Rndyk lund se utr 😩👏🏻", "Arey Yarr Apni Maa Matt Nangi Kar 😩🔥💞😩⛏️🔥🥀🤩💞😩🔥😩🩷💞",
-    " Tu hasta reh gya yaaro mein 😁💯💔 Teri maa chudgyi baazaro mein 😂🌹",
-    "Teri Maa Chudwa denge re 🪖🔥⛏️🥴🤪💔🩷💯😁😩💞", " 🩷 Gud ❤️ nyt 🧡 rndyk 💛 kal 🩵 Aaunga 💙 Teri 🖤 Maa 🩶 Chodne 🤍",
-    " 🥶 Are 😱 Mc 😩 Ye 🤔 Kaise 🤪 Kiya 😏 Teri 😎 Maa 😬 Randi 🙄 Hai 🤮 100% 😂",
-    "🩷🩵🤍🩶🖤❤️💚 Ye sare dill teri maa k naam beta 😂😜🔥", " Hat peche hat tera baap Rebel aya 😂😂🥴😹🤲🏻💪🏻",
-    "Leave le rndyk psnd nai aya tu meko 🤢👎🏻", "Teri maa chodu 💯 if yes then reply to my message 💀💀💀💪🏻🔥💯👆🏻💔😂😂💔💔💔",
-    "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
-    "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐀 😂🪄😂🪄",
-    " Teri Maa Ko बाहुबली style mein chodunga 🥶💔🤪😹", "Tumhare Pitashree 𝐃ɪᴘᴇsʜ 💯🔥🗿🌙",
-    " Tery behn bole fuck me 𝐃ɪᴘᴇsʜ daddy 😍🌹💋", " तेरी माँ 𝐃ɪᴘᴇsʜ पापा ki दीवानी Since 2k10 😂🖕🏻🔥", " Cover le सस्ती रंडी k काले बच्चे 🤢🤮🖕🏻🥀"
-]
+    def sans_bold(t: str) -> str:
+        result = ""
+        for c in t:
+            if 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D5D4)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D5EE)
+            elif '0' <= c <= '9': result += chr(ord(c) - ord('0') + 0x1D7EC)
+            else: result += c
+        return result
 
-ATTACK_LIST = ["⚔️ Teri aukat nahi mujhse ladhne ki randike 😂🔥", "💥 Chal bhaag yahan se chutiye warna maar khayega 🤣⚔️", "🗡️ Tera baap aaya hai sunta nahi kya 👑😈"]
-ROAST_LIST = ["🔥 Teri zindagi ek bakwas webseries ki tarah hai — 1 season mein flop 😂📺", "🤣 Bhai teri personality ek sada hua pyaz jaisi hai — khole toh aansu aaye 🧅💀", "😹 Tu itna bura lagta hai ke teri photo dekh ke mosquito bhi bhaag jata hai 🦟😂"]
-DISS_LIST = ["🎤 Tera naam sun ke log mute kar dete hain khud ko 🔇😂", "💀 Tu diss kar raha hai — khud ko diss kar pehle 🪞😹", "🎙️ Teri rap jaisi hai — no flow no bars no future 🎵😂"]
-WAR_LIST = ["⚔️ War shuru ho gayi — aur tu pehle hi haar gaya 😂🔥", "💣 Bhai main war mein nahi aata — main war khatam karne aata hoon 😈⚡", "🏴‍☠️ Tera jhanda uraya — apna wala lehraya 😎💀"]
-SAVAGE_LIST = ["😈 Main savage hoon — tujhe explanation nahi deta 🔥💀", "💀 Teri feelings mere liye statistics hain — irrelevant 😂😈", "🔥 Main woh nahi hoon jo tujhe comfortable feel karaaye 😎💀"]
+    def mono(t: str) -> str:
+        result = ""
+        for c in t:
+            if 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D670)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D68A)
+            elif '0' <= c <= '9': result += chr(ord(c) - ord('0') + 0x1D7F6)
+            else: result += c
+        return result
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SECTION 4: STATE MANAGEMENT SYSTEM
-# ──────────────────────────────────────────────────────────────────────────────
-GLOBAL_DB_LOCK = threading.Lock()
-active_runtimes = {}          # key: (user_id, slot)
-onboarding_states = {}        # key: user_id, state includes 'slot'
+    def fraktur(t: str) -> str:
+        special = {'C': 'ℭ', 'H': 'ℌ', 'I': 'ℑ', 'R': 'ℜ', 'Z': 'ℨ'}
+        result = ""
+        for c in t:
+            if c in special: result += special[c]
+            elif 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D504)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D51E)
+            else: result += c
+        return result
 
-def execute_db_migration():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-        # hosted_sessions now uses composite primary key (user_id, slot)
-        cursor.execute('''CREATE TABLE IF NOT EXISTS hosted_sessions
-                          (user_id INTEGER, slot INTEGER, session_key TEXT, gender TEXT, system_preset TEXT, api_id INTEGER, api_hash TEXT,
-                           PRIMARY KEY (user_id, slot))''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS user_metadata
-                          (user_id INTEGER, first_name TEXT, joined_at INTEGER, phone TEXT,
-                           PRIMARY KEY (user_id, phone))''')  # phone can be different per slot? but we'll keep as before
-        cursor.execute('''CREATE TABLE IF NOT EXISTS sudo_users
-                          (user_id INTEGER PRIMARY KEY)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS blocked_users
-                          (user_id INTEGER PRIMARY KEY)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS welcome_video
-                          (id INTEGER PRIMARY KEY, file_id TEXT, is_video_note INTEGER)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS api_config
-                          (id INTEGER PRIMARY KEY, api_id INTEGER, api_hash TEXT)''')
-        conn.commit()
-        conn.close()
+    def bold_italic_serif(t: str) -> str:
+        result = ""
+        for c in t:
+            if 'A' <= c <= 'Z': result += chr(ord(c) - ord('A') + 0x1D468)
+            elif 'a' <= c <= 'z': result += chr(ord(c) - ord('a') + 0x1D482)
+            else: result += c
+        return result
 
-execute_db_migration()
-bot = telebot.TeleBot(BOT_TOKEN)
+    DIV  = "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    DIV2 = "·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·͜·"
+    DIV3 = "⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯"
+    TOP  = "╔══════════════════════════╗"
+    BOT  = "╚══════════════════════════╝"
+    MID  = "╠══════════════════════════╣"
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SECTION 5: INTERACTIVE ANIMATION ENGINE UI
-# ──────────────────────────────────────────────────────────────────────────────
-class SidAnimationLibrary:
-    @staticmethod
-    def play_terminal_pulse(chat_id, target_msg_id, final_message_text, markup=None):
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   HELPERS
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    def is_owner(uid): return uid == OWNER_ID
+    def is_premium(uid): return is_owner(uid) or db.is_sudo(uid, OWNER_ID)
+
+    def uptime_str():
+        e = int(time.time() - START_TIME)
+        h, r = divmod(e, 3600); m, s = divmod(r, 60)
+        return f"{h}h {m}m {s}s"
+
+    def _phone_label(acct: dict) -> str:
+        phone = acct.get("phone", "")
+        return phone if phone else f"Account #{acct.get('slot', 0) + 1}"
+
+    async def owner_only(update: Update) -> bool:
+        if not is_owner(update.effective_user.id):
+            await update.message.reply_text(
+                f"{TOP}\n║  🔒  {bold_serif('Access Denied')}  🔒  ║\n{BOT}\n\n"
+                f"{script('This command is restricted to')}\n👑 {sans_bold('Owners Only')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return False
+        return True
+
+    async def premium_only(update: Update) -> bool:
+        if not is_premium(update.effective_user.id):
+            await update.message.reply_text(
+                f"🌟 {bold_serif('Premium Required')}\n\n"
+                f"{script('This feature is for')}\n"
+                f"👑 {sans_bold('Owners')} & {sans_bold('Premium Users')} {script('only')}\n\n"
+                f"📩 {mono('Contact:')} {SUPPORT_USERNAME}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return False
+        return True
+
+    async def check_blocked(update: Update) -> bool:
+        if db.is_blocked(update.effective_user.id):
+            await update.message.reply_text(
+                f"🚫 {bold_serif('You have been Blocked')}\n\n"
+                f"{script('Contact support to appeal.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return False
+        return True
+
+    async def cleanup_pending(uid: int):
+        data = pending_logins.pop(uid, None)
+        if data and data.get("client"):
+            try: await data["client"].disconnect()
+            except: pass
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /start
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        uid  = update.effective_user.id
+        name = update.effective_user.first_name or "User"
+
+        if not db.user_exists(uid):
+            db.save_user_meta(uid, {"first_name": name, "joined_at": int(time.time())})
+
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
+        running  = [a for a in hosted if runner.is_running(uid, a["slot"])]
+
+        if hosted:
+            status_line = (
+                f"\n📱 {fraktur('Accounts')} : {mono(str(len(hosted)))} hosted  "
+                f"| {mono(str(len(running)))} running"
+            )
+        else:
+            status_line = f"\n⚪ {fraktur('Userbot')}: {italic_serif('Not hosted yet')}"
+
+        welcome_video = db.get_welcome_video()
+        if welcome_video and welcome_video.get("file_id"):
+            try:
+                if welcome_video.get("is_video_note"):
+                    await context.bot.send_video_note(
+                        chat_id=update.effective_chat.id,
+                        video_note=welcome_video["file_id"],
+                    )
+                else:
+                    await context.bot.send_video(
+                        chat_id=update.effective_chat.id,
+                        video=welcome_video["file_id"],
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to send welcome video: {e}")
+
+        keyboard = [
+            [
+                InlineKeyboardButton("🚀  𝗛𝗼𝘀𝘁 𝗠𝘆 𝗨𝘀𝗲𝗿𝗯𝗼𝘁", callback_data="host"),
+            ],
+            [
+                InlineKeyboardButton("📋  𝗠𝗮𝘀𝘁𝗲𝗿 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀", callback_data="commands"),
+                InlineKeyboardButton("🌊  𝗙𝗹𝗼𝘄 𝗠𝗲𝗻𝘂",       callback_data="flow_menu"),
+            ],
+            [
+                InlineKeyboardButton("📊  𝗦𝘁𝗮𝘁𝘂𝘀",   callback_data="status"),
+                InlineKeyboardButton("🗑️  𝗟𝗼𝗴𝗼𝘂𝘁",   callback_data="menu_logout"),
+            ],
+            [
+                InlineKeyboardButton("📞  𝗦𝘂𝗽𝗽𝗼𝗿𝘁",          callback_data="support"),
+                InlineKeyboardButton("❓  𝗛𝗲𝗹𝗽 & 𝗚𝘂𝗶𝗱𝗲", callback_data="help"),
+            ],
+        ]
+        if is_owner(uid):
+            keyboard.append([
+                InlineKeyboardButton("📢  𝗕𝗿𝗼𝗮𝗱𝗰𝗮𝘀𝘁", callback_data="broadcast_menu"),
+                InlineKeyboardButton("⚙️  𝗦𝗲𝘁𝘁𝗶𝗻𝗴𝘀",   callback_data="settings_menu"),
+            ])
+
+        anime_bytes = db.get_random_anime_image()
+        
+        text = (
+            f"👑 **SID PREMIUM USERBOT ARCHITECTURE** 👑\n"
+            f"{DIV}\n"
+            f"✨ Welcome back, {bold_serif(name)}!\n\n"
+            f"» **Engine:** `v6.0-SID-DYNAMIC`\n"
+            f"» **Status:** `ONLINE & SECURE`\n\n"
+            f"🪪 {fraktur('Your ID')} : `{uid}`\n"
+            f"{status_line}\n\n"
+            f"{italic_serif('Select an option below')} 👇"
+        )
+
+        try:
+            if anime_bytes:
+                anime_file = BytesIO(anime_bytes)
+                anime_file.name = "anime.png"
+                await update.message.reply_photo(
+                    photo=anime_file,
+                    caption=text,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                )
+            else:
+                raise RuntimeError("No anime image available")
+        except Exception as e:
+            logger.warning(f"Failed to send anime image: {e}")
+            await update.message.reply_text(
+                text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /setwelcomevideo (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_setwelcomevideo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        reply = update.message.reply_to_message
+        if not reply:
+            await update.message.reply_text(
+                f"📽️ {bold_serif('Set Welcome Video')}\n\n"
+                f"{script('Reply to a video or video note with')}\n"
+                f"{mono('/setwelcomevideo')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        file_id = None
+        is_video_note = False
+
+        if reply.video:
+            file_id = reply.video.file_id
+        elif reply.video_note:
+            file_id = reply.video_note.file_id
+            is_video_note = True
+        else:
+            await update.message.reply_text(
+                f"❌ {bold_serif('Reply must be a video or video note.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        db.set_welcome_video({"file_id": file_id, "is_video_note": is_video_note})
+        await update.message.reply_text(
+            f"✅ {bold_serif('Welcome video set successfully!')}\n\n"
+            f"📹 {script('New users will see this video on /start')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /removewelcomevideo (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_removewelcomevideo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        if db.get_welcome_video() is None:
+            await update.message.reply_text(
+                f"⚠️ {italic_serif('No welcome video is currently set.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+        db.remove_welcome_video()
+        await update.message.reply_text(
+            f"🗑️ {bold_serif('Welcome video removed.')}\n\n"
+            f"{script('The /start message will now show only text.')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /help
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        text = (
+            f"❓ {double_struck('Help')} & {double_struck('Commands')}\n"
+            f"{DIV}\n\n"
+            f"{'━'*3} {sans_bold('User Commands')} {'━'*3}\n\n"
+            f"🔹 {mono('/start')}       {script('Grand Welcome Screen')}\n"
+            f"🔹 {mono('/help')}        {script('This Help Menu')}\n"
+            f"🔹 {mono('/commands')}    {script('Master Features Menu')}\n"
+            f"🔹 {mono('/flowmenu')}    {script('Flow Bot Features Menu')}\n"
+            f"🔹 {mono('/host')}        {script('Add & Deploy Account')}\n"
+            f"🔹 {mono('/myaccounts')}  {script('Manage All Accounts')}\n"
+            f"🔹 {mono('/status')}      {script('Check All Userbots')}\n"
+            f"🔹 {mono('/restart')}     {script('Restart Userbot')}\n"
+            f"🔹 {mono('/logout')}      {script('Logout an Account')}\n"
+            f"🔹 {mono('/support')}     {script('Contact Admin')}\n\n"
+            f"{DIV}\n"
+            f"{'━'*3} 👑 {sans_bold('Owner Commands')} {'━'*3}\n\n"
+            f"🔺 {mono('/restartall')}    {fraktur('Restart All Userbots')}\n"
+            f"🔺 {mono('/refresh')}       {fraktur('Refresh Bot State')}\n"
+            f"🔺 {mono('/sudolist')}      {fraktur('Manage Sudo Users')}\n"
+            f"🔺 {mono('/setdp')}         {fraktur('Set Display Photo')}\n"
+            f"🔺 {mono('/block')}         {fraktur('Block a User')}\n"
+            f"🔺 {mono('/unblock')}       {fraktur('Unblock a User')}\n"
+            f"🔺 {mono('/blockeduser')}   {fraktur('View Blocked List')}\n"
+            f"🔺 {mono('/stats')}         {fraktur('Bot Statistics')}\n"
+            f"🔺 {mono('/secretfunction')} {fraktur('Secret Commands')}\n"
+            f"🔺 {mono('/setwelcomevideo')} {fraktur('Set Welcome Video')}\n"
+            f"🔺 {mono('/removewelcomevideo')} {fraktur('Remove Welcome Video')}\n"
+            f"🔺 {mono('/setbot')}        {fraktur('ON/OFF Bot')}\n"
+            f"{DIV}"
+        )
+        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   MENUS
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        await update.message.reply_text(SID_MASTER_MENU, parse_mode=ParseMode.MARKDOWN)
+
+    async def cmd_flowmenu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        await update.message.reply_text(SID_FLOW_BOT_MENU, parse_mode=ParseMode.MARKDOWN)
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /host — Phone + OTP Login Flow  (supports multiple accounts)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_host_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.callback_query:
+            await update.callback_query.answer()
+            reply = update.callback_query.message.reply_text
+        else:
+            reply = update.message.reply_text
+
+        if not await check_blocked(update): return ConversationHandler.END
+        uid = update.effective_user.id
+
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
+        if len(hosted) >= MAX_ACCOUNTS_PER_USER:
+            await reply(
+                f"📱 {bold_serif('Account Limit Reached')}\n\n"
+                f"{script('You already have')} {mono(str(len(hosted)))} {script('accounts hosted.')}\n"
+                f"📌 {italic_serif('Maximum:')} {mono(str(MAX_ACCOUNTS_PER_USER))} {italic_serif('per user')}\n\n"
+                f"🗑️ {script('Logout an account first:')} /logout",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+        total = db.hosted_count()
+        if total >= MAX_USERBOTS and not is_premium(uid):
+            await reply(
+                f"😔 {sans_bold('Slots Full')} ({total}/{MAX_USERBOTS})\n\n"
+                f"{script('Contact')} {SUPPORT_USERNAME} {script('to get a slot.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+        await cleanup_pending(uid)
+
+        extra = f"\n\n📱 {italic_serif('Account')} {mono(str(len(hosted)+1))} {italic_serif('of')} {mono(str(MAX_ACCOUNTS_PER_USER))}" if hosted else ""
+
+        await reply(
+            f"{TOP}\n"
+            f"║  🚀  {bold_serif('Deploy Your Userbot')}  🚀  ║\n"
+            f"{BOT}\n\n"
+            f"📱 {sans_bold('Step 1 of 3')}\n"
+            f"{DIV3}\n"
+            f"{script('Enter your Telegram Phone Number')}\n\n"
+            f"🌍 {fraktur('Format')}: {mono('+91XXXXXXXXXX')}\n"
+            f"_(country code ke saath)_{extra}\n\n"
+            f"🔴 {italic_serif('Send /cancel to abort')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return ASK_PHONE
+
+
+    async def host_got_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid   = update.effective_user.id
+        phone = update.message.text.strip()
+        digits = phone.replace("+", "").replace(" ", "").replace("-", "")
+        if not digits.isdigit() or len(digits) < 7:
+            await update.message.reply_text(
+                f"❌ {bold_serif('Invalid Number')}\n\n"
+                f"{script('Please enter in format')}: {mono('+91XXXXXXXXXX')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ASK_PHONE
+
+        msg = await update.message.reply_text(
+            f"⏳ {sans_bold('Sending OTP to Telegram')}... 📨"
+        )
+        try:
+            client = TelegramClient(StringSession(), TELEGRAM_API_ID, TELEGRAM_API_HASH)
+            await client.connect()
+            result = await client.send_code_request(phone)
+            pending_logins[uid] = {
+                "client": client,
+                "phone":  phone,
+                "phone_code_hash": result.phone_code_hash,
+            }
+            await msg.edit_text(
+                f"{TOP}\n"
+                f"║  📨  {bold_serif('OTP Sent Successfully')}  📨  ║\n"
+                f"{BOT}\n\n"
+                f"📱 {fraktur('Number')}: {mono(phone)}\n\n"
+                f"📩 {sans_bold('Step 2 of 3')}\n"
+                f"{DIV3}\n"
+                f"{script('Enter the Login Code from your Telegram app')}\n\n"
+                f"💡 {italic_serif('Tip: Send with spaces to avoid auto-forward')}\n"
+                f"    {mono('Example')}: {bold_serif('1 2 3 4 5')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ASK_CODE
+        except FloodWaitError as e:
+            await cleanup_pending(uid)
+            await msg.edit_text(
+                f"⏳ {sans_bold('Flood Wait!')} {mono(str(e.seconds) + 's')} baad try karo."
+            )
+            return ConversationHandler.END
+        except Exception as e:
+            await cleanup_pending(uid)
+            await msg.edit_text(
+                f"❌ {bold_serif('Error')}\n{mono(str(e)[:120])}\n\n{script('Try again:')} /host",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+
+    async def host_got_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid  = update.effective_user.id
+        code = update.message.text.strip().replace(" ", "")
+
+        pending = pending_logins.get(uid)
+        if not pending:
+            await update.message.reply_text(
+                f"❌ {sans_bold('Session expired. Try /host again.')}"
+            )
+            return ConversationHandler.END
+
+        client: TelegramClient = pending["client"]
+        phone: str = pending["phone"]
+        hash_: str = pending["phone_code_hash"]
+
+        msg = await update.message.reply_text(f"🔐 {sans_bold('Verifying OTP')}...")
+        try:
+            await client.sign_in(phone, code, phone_code_hash=hash_)
+            session_string = client.session.save()
+            await client.disconnect()
+            pending_logins.pop(uid, None)
+            await _deploy_userbot(update, context, uid, session_string, phone, msg)
+            return ConversationHandler.END
+
+        except SessionPasswordNeededError:
+            await msg.edit_text(
+                f"{TOP}\n║  🔒  {bold_serif('2FA Detected')}  🔒  ║\n{BOT}\n\n"
+                f"🛡️ {sans_bold('Step 3 of 3')}\n{DIV3}\n"
+                f"{script('Your account has Two-Step Verification')}\n\n"
+                f"🔑 {fraktur('Enter your 2FA Password')}:",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ASK_2FA
+
+        except PhoneCodeInvalidError:
+            await msg.edit_text(
+                f"❌ {bold_serif('Wrong Code!')} Dobara enter karo:\n\n"
+                f"💡 {mono('Spaces ke saath')}: {bold_serif('1 2 3 4 5')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ASK_CODE
+
+        except PhoneCodeExpiredError:
+            await cleanup_pending(uid)
+            await msg.edit_text(
+                f"⏳ {sans_bold('Code Expired!')} Dobara /host karo.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+        except Exception as e:
+            await cleanup_pending(uid)
+            await msg.edit_text(
+                f"❌ {bold_serif('Error')}\n{mono(str(e)[:120])}\n\nDobara /host karo.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+
+    async def host_got_2fa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid      = update.effective_user.id
+        password = update.message.text.strip()
+        pending  = pending_logins.get(uid)
+        if not pending:
+            await update.message.reply_text("❌ Session expire ho gayi. /host karo.")
+            return ConversationHandler.END
+
+        client: TelegramClient = pending["client"]
+        phone: str = pending.get("phone", "")
+        msg = await update.message.reply_text(f"🔐 {sans_bold('Verifying 2FA Password')}...")
+        try:
+            await client.sign_in(password=password)
+            session_string = client.session.save()
+            await client.disconnect()
+            pending_logins.pop(uid, None)
+            await _deploy_userbot(update, context, uid, session_string, phone, msg)
+            return ConversationHandler.END
+        except Exception as e:
+            await cleanup_pending(uid)
+            await msg.edit_text(
+                f"❌ {bold_serif('Wrong 2FA Password')}\n"
+                f"{mono(str(e)[:120])}\n\nDobara /host karo.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return ConversationHandler.END
+
+
+    async def _deploy_userbot(update, context, uid, session_string, phone, msg):
+        name     = update.effective_user.first_name or "User"
+        accounts = db.get_accounts(uid)
+        existing = {a.get("slot") for a in accounts}
+        slot = 0
+        while slot in existing:
+            slot += 1
+        acc_num = slot + 1
+
+        # ─── SID MASTER TERMINAL PULSE ANIMATION ───
         frames = [
             "🟢 `[▱▱▱▱▱▱▱▱▱] Booting Sid Kernel...`",
             "🟡 `[▰▰▰▱▱▱▱▱▱] Injecting Modules...`",
             "🟠 `[▰▰▰▰▰▰▱▱▱] Bypassing Security...`",
             "🔴 `[▰▰▰▰▰▰▰▰▱] Establishing Uplink...`",
-            "✅ `[▰▰▰▰▰▰▰▰▰] Link Established!`"
+            f"✅ `[▰▰▰▰▰▰▰▰▰] Link Established for Slot #{acc_num}!`"
         ]
-        def pipeline():
+        for frame in frames:
             try:
-                for frame in frames:
-                    bot.edit_message_text(frame, chat_id, target_msg_id, parse_mode='Markdown')
-                    time.sleep(0.6)
-                bot.edit_message_text(final_message_text, chat_id, target_msg_id, reply_markup=markup, parse_mode='Markdown')
-            except Exception as e: logger.error(f"UI error: {e}")
-        Thread(target=pipeline, daemon=True).start()
-
-# ──────────────────────────────────────────────────────────────────────────────
-# HOSTER DASHBOARD & OTP FLOW (Multi‑slot support)
-# ──────────────────────────────────────────────────────────────────────────────
-
-@bot.message_handler(commands=['start', 'menu', 'sid', 'host'])
-def display_dashboard_interface(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        types.InlineKeyboardButton("🔮 𝐃𝐞𝐩𝐥𝐨𝐲 𝐁𝐨𝐲 🔮", callback_data="deploy_boy"),
-        types.InlineKeyboardButton("🌸 𝐃𝐞𝐩𝐥𝐨𝐲 𝐆𝐢𝐫𝐥 🌸", callback_data="deploy_girl")
-    )
-    markup.add(
-        types.InlineKeyboardButton("⚡ 𝐒𝐞𝐫𝐯𝐞𝐫 𝐓𝐞𝐥𝐞𝐦𝐞𝐭𝐫𝐲 ⚡", callback_data="telemetry"),
-        types.InlineKeyboardButton("🛑 𝐓𝐞𝐫𝐦𝐢𝐧𝐚𝐭𝐞 🛑", callback_data="terminate")
-    )
-    markup.row(
-        types.InlineKeyboardButton("📊 𝐌𝐲 𝐀𝐜𝐜𝐨𝐮𝐧𝐭", callback_data="my_account"),
-        types.InlineKeyboardButton("📚 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬", callback_data="cmd_list"),
-        types.InlineKeyboardButton("📞 𝐒𝐮𝐩𝐩𝐨𝐫𝐭", callback_data="support")
-    )
-    welcome_text = f"👑 **SID PREMIUM USERBOT ARCHITECTURE** 👑\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✨ Welcome, {message.from_user.first_name}.\n\n» **Engine:** `v6.0-SID-DYNAMIC`\n» **Status:** `ONLINE & SECURE`\n\nSelect your deployment module below:"
-    bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: call.data in ["deploy_boy", "deploy_girl"])
-def trigger_deployment(call):
-    bot.answer_callback_query(call.id)
-    gender_choice = "BOY" if "boy" in call.data else "GIRL"
-    # Step 0: ask for slot number
-    onboarding_states[call.from_user.id] = {
-        'step': 'SLOT_INPUT',
-        'gender': gender_choice,
-        'api_id': DEFAULT_API_ID,
-        'api_hash': DEFAULT_API_HASH,
-        'slot': None,
-        'phone': None,
-        'client': None,
-        'phone_code_hash': None
-    }
-    bot.send_message(call.message.chat.id, f"📋 **SLOT SELECTION**\n\nEnter a slot number between 1 and 5 to host this userbot:\n(Slot 1-5, each can hold a separate account)", parse_mode='Markdown')
-
-@bot.message_handler(func=lambda message: message.from_user.id in onboarding_states)
-def handle_onboarding(message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-    text = message.text.strip() if message.text else ""
-
-    if text.lower() == '/cancel':
-        onboarding_states.pop(user_id, None)
-        bot.send_message(chat_id, "❌ Registration cancelled.")
-        return
-
-    state = onboarding_states[user_id]
-
-    if state['step'] == 'SLOT_INPUT':
-        try:
-            slot = int(text)
-            if slot < 1 or slot > 5:
-                raise ValueError
-            # Check if slot already used by this user
-            with GLOBAL_DB_LOCK:
-                conn = sqlite3.connect(DATABASE_PATH)
-                c = conn.cursor()
-                c.execute('SELECT 1 FROM hosted_sessions WHERE user_id=? AND slot=?', (user_id, slot))
-                exists = c.fetchone() is not None
-                conn.close()
-            if exists:
-                bot.send_message(chat_id, "❌ This slot is already occupied. Choose another slot.")
-                return
-            state['slot'] = slot
-            state['step'] = 'PHONE_INPUT'
-            bot.send_message(chat_id, f"📱 **STEP 1: SID {state['gender']} MODULE**\n\n✨ Enter your phone number with country code (e.g., `+919876543210`):", parse_mode='Markdown')
-        except ValueError:
-            bot.send_message(chat_id, "❌ Invalid slot. Please enter a number between 1 and 5.")
-        return
-
-    elif state['step'] == 'PHONE_INPUT':
-        state['phone'] = text
-        progress_msg = bot.send_message(chat_id, "`⚡ Generating SID runtime...`", parse_mode='Markdown')
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            client = TelegramClient(os.path.join(RUNTIMES_DIR, f"temp_{user_id}_{state['slot']}"), state['api_id'], state['api_hash'], loop=loop)
-            loop.run_until_complete(client.connect())
-            state['client'] = client
-            result = loop.run_until_complete(client.send_code_request(state['phone']))
-            state['phone_code_hash'] = result.phone_code_hash
-            state['step'] = 'OTP_INPUT'
-            bot.delete_message(chat_id, progress_msg.message_id)
-            bot.send_message(chat_id, f"🌈 **STEP 2: VERIFICATION**\n📥 **OTP Sent to {state['phone']}**\n\n✨ Please enter your OTP code (spaces allowed):", parse_mode='Markdown')
-        except Exception as e:
-            bot.send_message(chat_id, f"❌ **Error:** `{e}`")
-            onboarding_states.pop(user_id, None)
-
-    elif state['step'] == 'OTP_INPUT':
-        clean_code = text.replace(" ", "")
-        client = state['client']
-        loop = client.loop
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(client.sign_in(state['phone'], code=clean_code, phone_code_hash=state['phone_code_hash']))
-            # Success → bypass 2FA and show preset selection
-            select_preset_interface(chat_id, user_id)
-        except SessionPasswordNeededError:
-            # 2FA Catch - Step 3
-            state['step'] = 'PASSWORD_2FA_INPUT'
-            bot.send_message(chat_id, "🔐 **STEP 3: 2FA REQUIRED**\nYour account is secured with a Cloud Password.\n\n✨ Please enter your 2FA Password to proceed:", parse_mode='Markdown')
-        except Exception as e:
-            bot.send_message(chat_id, f"❌ **Fault:** `{e}`")
-            onboarding_states.pop(user_id, None)
-
-    elif state['step'] == 'PASSWORD_2FA_INPUT':
-        client = state['client']
-        loop = client.loop
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(client.sign_in(password=text))
-            select_preset_interface(chat_id, user_id)
-        except Exception as e:
-            bot.send_message(chat_id, f"❌ **2FA Fault:** `{e}`")
-            onboarding_states.pop(user_id, None)
-
-def select_preset_interface(chat_id, user_id):
-    gender = onboarding_states[user_id]['gender']
-    presets = BOY_PRESETS if gender == "BOY" else GIRL_PRESETS
-    markup = types.InlineKeyboardMarkup(row_width=1)
-    for i, p in enumerate(presets):
-        markup.add(types.InlineKeyboardButton(f"🎭 {p} 🎭", callback_data=f"finalize_{i}_{user_id}"))
-    bot.send_message(chat_id, f"✅ **STEP 4: AUTHENTICATION SUCCESSFUL!**\n\n✨ Choose your automated personality to host:", reply_markup=markup, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("finalize_"))
-def finalize_and_deploy(call):
-    _, index_str, target_uid_str = call.data.split("_")
-    user_id = int(target_uid_str)
-    if call.from_user.id != user_id:
-        return bot.answer_callback_query(call.id, "❌ Not your session.")
-    bot.answer_callback_query(call.id)
-
-    state = onboarding_states.pop(user_id, None)
-    if not state:
-        return bot.send_message(call.message.chat.id, "❌ Session expired.")
-
-    gender = state['gender']
-    slot = state['slot']
-    preset_choice = (BOY_PRESETS if gender == "BOY" else GIRL_PRESETS)[int(index_str)]
-
-    client = state['client']
-    stable_session = os.path.join(RUNTIMES_DIR, f"active_{user_id}_{slot}")
-    client.loop.run_until_complete(client.disconnect())
-
-    src, dest = os.path.join(RUNTIMES_DIR, f"temp_{user_id}_{slot}.session"), f"{stable_session}.session"
-    if os.path.exists(src):
-        if os.path.exists(dest):
-            os.remove(dest)
-        os.rename(src, dest)
-
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-        cursor.execute('INSERT OR REPLACE INTO hosted_sessions VALUES (?, ?, ?, ?, ?, ?, ?)',
-                       (user_id, slot, dest, gender, preset_choice, state['api_id'], state['api_hash']))
-        cursor.execute('INSERT OR REPLACE INTO user_metadata (user_id, phone) VALUES (?, ?)',
-                       (user_id, state['phone']))
-        conn.commit()
-        conn.close()
-
-    p_msg = bot.send_message(call.message.chat.id, "`Initializing Host...`", parse_mode='Markdown')
-    s_txt = f"🚀 **SID {gender} USERBOT DEPLOYED (Slot {slot})**\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n» **Identity:** `{preset_choice}`\n» **Status:** `ACTIVE & HOSTED`\n\nSend `.sid_menu` in any chat to view powers!"
-    SidAnimationLibrary.play_terminal_pulse(call.message.chat.id, p_msg.message_id, s_txt)
-    threading.Thread(target=deploy_live_userbot_runtime, args=(call.message.chat.id, user_id, slot, gender, preset_choice), daemon=True).start()
-
-# ──────────────────────────────────────────────────────────────────────────────
-# CORE TELETHON USERBOT ENGINE (DYNAMIC FUNCTIONS)
-# ──────────────────────────────────────────────────────────────────────────────
-def deploy_live_userbot_runtime(chat_id, user_id, slot, gender, preset_string):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH); cursor = conn.cursor()
-        cursor.execute('SELECT session_key, api_id, api_hash FROM hosted_sessions WHERE user_id = ? AND slot = ?', (user_id, slot))
-        record = cursor.fetchone(); conn.close()
-    if not record:
-        if chat_id:
-            bot.send_message(chat_id, "❌ Session record not found.")
-        return
-    session_key, api_id, api_hash = record
-
-    if os.path.exists(session_key):
-        session_file_base = session_key.replace(".session", "")
-        client = TelegramClient(session_file_base, int(api_id), api_hash)
-    else:
-        client = TelegramClient(StringSession(session_key), int(api_id), api_hash)
-
-    active_runtimes[(user_id, slot)] = {'client': client, 'loop': asyncio.get_event_loop(), 'thread': threading.current_thread()}
-
-    U_STATE = {
-        'auth_users': set(), 'muted': {}, 'safe': {}, 'active_raids': {},
-        'auto_react': None, 'original_profile': {}, 'start_time': time.time(),
-        'spam_delay': 0.1, 'live_forwards': {}, 'gcmute_loops': {}, 'reply_modes': {}
-    }
-
-    async def _safe_edit(event, text):
-        if event.out:
-            return await event.edit(text)
-        elif event.sender_id in U_STATE['auth_users']:
-            try:
-                await event.delete()
-            except:
-                pass
-            return await client.send_message(event.chat_id, text, reply_to=event.reply_to_msg_id)
-
-    async def get_target(event, arg):
-        if event.is_reply:
-            return (await event.get_reply_message()).sender_id
-        if arg:
-            try:
-                return (await client.get_entity(arg)).id
-            except:
-                pass
-        return None
-
-    def is_authorized(event):
-        return event.out or event.sender_id in U_STATE['auth_users']
-
-    async def operational_lifecycle():
-        await client.connect()
-        try:
-            await client(UpdateProfileRequest(first_name=preset_string.split()[0],
-                                              about=f"Powered by SID Master Engine 👑 • {preset_string}"))
-        except:
-            pass
-
-        # ── 1. DYNAMIC EFFECTS & ANIMATIONS ──
-        @client.on(events.NewMessage(pattern=r"\.hack", outgoing=True))
-        async def sid_hack(event):
-            anims = [
-                "💻 `Initializing SID Exploit Script...`",
-                "💻 `Connecting to Target's Local IP...`",
-                "💻 `Bypassing Security Firewalls... [▓▓░░░░]`",
-                "💻 `Extracting Database... [▓▓▓▓▓░]`",
-                "💻 `Decrypting Mainframe... [▓▓▓▓▓▓]`",
-                f"👑 **HACK COMPLETE BY {preset_string}!**\n» System Compromised. Target Destroyed. 😈"
-            ]
-            for frame in anims:
-                await event.edit(frame)
-                await asyncio.sleep(0.8)
-
-        @client.on(events.NewMessage(pattern=r"\.load", outgoing=True))
-        async def sid_load(event):
-            bar = ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"]
-            for i in range(1, 101, 15):
-                frame = bar[(i//15)%len(bar)]
-                await event.edit(f"⏳ **Loading Matrix:** `{frame} {i}%`")
-                await asyncio.sleep(0.4)
-            await event.edit(f"✅ **SID MATRIX FULLY LOADED!**")
-
-        @client.on(events.NewMessage(pattern=r"\.magic", outgoing=True))
-        async def sid_magic(event):
-            text = "SID IS INCREDIBLE"
-            for i in range(len(text)):
-                await event.edit(f"🪄 `{text[:i+1]}`")
-                await asyncio.sleep(0.2)
-            await event.edit(f"✨ **{text}** ✨")
-
-        @client.on(events.NewMessage(pattern=r"\.heart", outgoing=True))
-        async def sid_heart(event):
-            hearts = ["🤍", "🩷", "💖", "💗", "💓", "💞", "💕"]
-            for h in hearts:
-                await event.edit(f"Generating love... {h}")
-                await asyncio.sleep(0.4)
-            await event.edit(f"{hearts[-1]} **SID SENDS LOVE!** {hearts[-1]}")
-
-        @client.on(events.NewMessage(pattern=r"\.matrix", outgoing=True))
-        async def sid_matrix(event):
-            for _ in range(5):
-                bin_str = "".join([str(random.randint(0, 1)) for _ in range(30)])
-                await event.edit(f"🟩 `{bin_str}`\n🟩 `{bin_str[::-1]}`\n🟩 `{bin_str}`")
-                await asyncio.sleep(0.4)
-            await event.edit(f"🟢 **MATRIX BYPASSED** 🟢")
-
-        @client.on(events.NewMessage(pattern=r"\.explode", outgoing=True))
-        async def sid_explode(event):
-            anims = ["💣 `3...`", "💣 `2...`", "💣 `1...`", "💥 **BOOOOOOOOM** 💥"]
-            for frame in anims:
-                await event.edit(frame)
-                await asyncio.sleep(1)
-
-        @client.on(events.NewMessage(pattern=r"\.typing", outgoing=True))
-        async def sid_typing(event):
-            txt = event.raw_text.replace(".typing", "").strip()
-            if not txt:
-                return await event.edit("❌ Provide text.")
-            current = ""
-            for char in txt:
-                current += char
-                await event.edit(current + " |")
-                await asyncio.sleep(0.1)
-            await event.edit(current)
-
-        # ── 1.5 NEW SPAM POWER COMMANDS ──
-        @client.on(events.NewMessage(pattern=r"\.spam (.*)", outgoing=True))
-        async def sid_spam(event):
-            args = event.pattern_match.group(1).split(' ', 1)
-            if len(args) != 2:
-                return await event.edit("❌ Usage: `.spam <count> <text>`")
-            try:
-                count = int(args[0])
-                text = args[1]
-                await event.delete()
-                tasks = []
-                for _ in range(count):
-                    tasks.append(client.send_message(event.chat_id, text))
-                    if len(tasks) >= 10:
-                        await asyncio.gather(*tasks)
-                        tasks = []
-                        await asyncio.sleep(0.15)
-                if tasks:
-                    await asyncio.gather(*tasks)
-            except Exception as e:
+                await msg.edit_text(frame, parse_mode=ParseMode.MARKDOWN)
+                await asyncio.sleep(0.6)
+            except Exception:
                 pass
 
-        @client.on(events.NewMessage(pattern=r"\.mixspam (.*)", outgoing=True))
-        async def sid_mixspam(event):
-            args = event.pattern_match.group(1).strip()
-            if not args.isdigit():
-                return await event.edit("❌ Usage: `.mixspam <count>`")
+        ok = runner.start_userbot(
+            uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH, session_string, str(uid),
+        )
+        
+        if ok:
+            db.save_user_meta(uid, {"first_name": name})
+            db.add_account(uid, {
+                "slot":           slot,
+                "session_string": session_string,
+                "hosted":         True,
+                "hosted_at":      int(time.time()),
+                "phone":          phone,
+            })
+            
+            anime_bytes = db.get_random_anime_image()
             try:
-                count = int(args)
-                await event.delete()
-                tasks = []
-                for _ in range(count):
-                    random_mix = random.choice([RAPIST_MESSAGES, DIPESH_MESSAGES, HOMIES_MESSAGES, ATTACK_LIST])
-                    tasks.append(client.send_message(event.chat_id, random.choice(random_mix)))
-                    if len(tasks) >= 10:
-                        await asyncio.gather(*tasks)
-                        tasks = []
-                        await asyncio.sleep(0.2)
-                if tasks:
-                    await asyncio.gather(*tasks)
+                await msg.delete()
+                if not anime_bytes:
+                    raise RuntimeError("No anime image available")
+                anime_file = BytesIO(anime_bytes)
+                anime_file.name = "deployment_anime.png"
+                await context.bot.send_photo(
+                    chat_id=update.effective_chat.id,
+                    photo=anime_file,
+                    caption=(
+                        f"{TOP}\n"
+                        f"║  🎉  {bold_serif('Deploy Successful')}  🎉  ║\n"
+                        f"{BOT}\n\n"
+                        f"✅ {sans_bold('Account')} : {mono('#' + str(acc_num))}\n"
+                        f"📱 {sans_bold('Phone')}   : {mono(phone if phone else 'N/A')}\n"
+                        f"⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}\n"
+                        f"📦 {sans_bold('Commands')}: {mono('500+')}\n\n"
+                        f"{DIV}\n"
+                        f"🔹 {italic_serif('Kisi bhi chat mein')} {mono('.alive')} {italic_serif('bhejo')}\n"
+                        f"🔹 /myaccounts {italic_serif('se sab accounts dekho')}\n"
+                        f"🔹 /host {italic_serif('se aur account add karo')}"
+                    ),
+                    parse_mode=ParseMode.MARKDOWN,
+                )
             except Exception as e:
-                pass
+                logger.warning(f"Failed to send anime image after deploy: {e}")
+                await msg.edit_text(
+                    f"{TOP}\n"
+                    f"║  🎉  {bold_serif('Deploy Successful')}  🎉  ║\n"
+                    f"{BOT}\n\n"
+                    f"✅ {sans_bold('Account')} : {mono('#' + str(acc_num))}\n"
+                    f"📱 {sans_bold('Phone')}   : {mono(phone if phone else 'N/A')}\n"
+                    f"⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}\n"
+                    f"📦 {sans_bold('Commands')}: {mono('500+')}\n\n"
+                    f"{DIV}\n"
+                    f"🔹 {italic_serif('Kisi bhi chat mein')} {mono('.alive')} {italic_serif('bhejo')}\n"
+                    f"🔹 /myaccounts {italic_serif('se sab accounts dekho')}\n"
+                    f"🔹 /host {italic_serif('se aur account add karo')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+        else:
+            await msg.edit_text(
+                f"❌ {bold_serif('Deploy Failed')}\n\n"
+                f"{script('Possible reasons:')}\n"
+                f"• {fraktur('Account banned by Telegram')}\n"
+                f"• {fraktur('Server error')}\n\n"
+                f"📩 {sans_bold('Support')}: {SUPPORT_USERNAME}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
 
-        # ── 2. ENGINE STATS & PING ──
-        @client.on(events.NewMessage(pattern=r"\.sid$|\.alive$", outgoing=True))
-        async def sid_alive(event):
-            uptime = time.time() - U_STATE['start_time']
-            h, r = divmod(int(uptime), 3600); m, s = divmod(r, 60)
-            if gender == "BOY":
-                txt = f"👑 **SID ENGINE IS DOMINATING** 👑\n━━━━━━━━━━━━━━━━━━━━\n» **Master:** `{preset_string}`\n» **Vibe:** `Aggressive & Unstoppable` 🔥\n» **Uptime:** `{h}h {m}m {s}s`"
-            else:
-                txt = f"🌸 **SID ENGINE IS THRIVING** 🌸\n━━━━━━━━━━━━━━━━━━━━\n» **Queen:** `{preset_string}`\n» **Vibe:** `Aesthetic & Flawless` ✨\n» **Uptime:** `{h}h {m}m {s}s`"
-            await _safe_edit(event, txt)
 
-        @client.on(events.NewMessage(pattern=r"\.ping", outgoing=True))
-        async def sid_ping(event):
-            start = time.time()
-            await event.edit("⚡ `Pinging...`")
-            ms = round((time.time() - start) * 1000, 2)
-            if gender == "BOY":
-                await event.edit(f"😈 **SID NETWORK SPEED**\n» `{ms} ms` - *Too fast for you.*")
-            else:
-                await event.edit(f"🎀 **SID NETWORK SPEED**\n» `{ms} ms` - *Lightning fast bestie!* ✨")
+    async def host_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await cleanup_pending(update.effective_user.id)
+        await update.message.reply_text(
+            f"🚫 {bold_serif('Login Cancelled')}\n\n"
+            f"{script('Use /host to try again anytime.')}"
+        )
+        return ConversationHandler.END
 
-        # ── 3. RAID COMMANDS ──
-        def register_raid(cmd, text_array):
-            @client.on(events.NewMessage(pattern=rf"\.{cmd}"))
-            async def start_raid(event):
-                if not is_authorized(event):
-                    return
-                tgt = await get_target(event, event.raw_text.split(" ", 1)[1] if len(event.raw_text.split())>1 else "")
-                if not tgt:
-                    return await _safe_edit(event, "❌ Reply to a user.")
-                if cmd not in U_STATE['active_raids']:
-                    U_STATE['active_raids'][cmd] = set()
-                U_STATE['active_raids'][cmd].add(tgt)
-                await _safe_edit(event, f"🔥 **{cmd.upper()} RAID ON** → `{tgt}`")
 
-            @client.on(events.NewMessage(pattern=rf"\.s{cmd}"))
-            async def stop_raid(event):
-                if not is_authorized(event):
-                    return
-                if cmd in U_STATE['active_raids']:
-                    U_STATE['active_raids'][cmd].clear()
-                await _safe_edit(event, f"🛑 **{cmd.upper()} RAID OFF**")
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /broadcast — Owner-only broadcast to all registered users
+    # ════════════════════════════════════════════════════════════════════════════════
 
-        register_raid("attack", ATTACK_LIST)
-        register_raid("roast", ROAST_LIST)
-        register_raid("diss", DISS_LIST)
-        register_raid("war", WAR_LIST)
-        register_raid("savage", SAVAGE_LIST)
-        register_raid("rebel", DIPESH_MESSAGES)
-        register_raid("sid", RAPIST_MESSAGES)       
-        register_raid("homies", HOMIES_MESSAGES)
+    async def cmd_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update):
+            return
 
-        @client.on(events.NewMessage())
-        async def raid_trigger(event):
-            if event.out:
-                return
-            sender = event.sender_id
-            for cmd, targets in U_STATE['active_raids'].items():
-                if sender in targets:
-                    array_map = {
-                        "attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST,
-                        "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES,
-                        "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES
-                    }
-                    try:
-                        await event.reply(random.choice(array_map[cmd]))
-                        await asyncio.sleep(0.3)
-                    except FloodWaitError as e:
-                        await asyncio.sleep(e.seconds)
-                    except:
-                        pass
+        reply = update.message.reply_to_message
+        text_arg = " ".join(context.args).strip()
 
-        # ── 4. UTILITIES (Music, QR, TTS, Clone) ──
-        @client.on(events.NewMessage(pattern=r"\.song", outgoing=True))
-        async def sid_song(event):
-            song_name = event.raw_text.replace(".song", "").strip()
-            if not song_name:
-                return await _safe_edit(event, "❌ Provide a song name")
-            await _safe_edit(event, f"🎵 Downloading: `{song_name}`...")
-            file_base = f"sid_song_{event.id}"
-            opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': f'{file_base}.%(ext)s',
-                'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
-                'quiet': True,
-                'default_search': 'ytsearch1'
-            }
+        if not reply and not text_arg:
+            await update.message.reply_text(
+                f"{TOP}\n"
+                f"║  📢  {bold_serif('Broadcast Center')}  📢  ║\n"
+                f"{BOT}\n\n"
+                f"📝 {script('Reply to any message with')} {mono('/broadcast')}\n"
+                f"or {script('use')} {mono('/broadcast your message here')}\n\n"
+                f"✨ {italic_serif('Media, photos, videos and files are supported when replying.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        users = []
+        for uid_str in db.get_all_users():
             try:
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    ydl.extract_info(song_name, download=True)
-                    if os.path.exists(f"{file_base}.mp3"):
-                        await client.send_file(event.chat_id, f"{file_base}.mp3", reply_to=event.reply_to_msg_id)
-                        os.remove(f"{file_base}.mp3")
-                        try:
-                            await event.delete()
-                        except:
-                            pass
-                    else:
-                        await _safe_edit(event, "❌ Failed.")
-            except Exception as e:
-                await _safe_edit(event, f"❌ Error: {e}")
+                target_uid = int(uid_str)
+            except Exception:
+                continue
+            if target_uid == OWNER_ID or db.is_blocked(target_uid):
+                continue
+            users.append(target_uid)
 
-        @client.on(events.NewMessage(pattern=r"\.qr", outgoing=True))
-        async def sid_qr(event):
-            txt = event.raw_text.replace(".qr", "").strip()
-            if not txt:
-                return await _safe_edit(event, "❌ Provide text.")
-            await _safe_edit(event, "⚡ Generating QR...")
-            f = f"qr_{event.id}.png"
-            qrcode.make(txt).save(f)
-            await client.send_file(event.chat_id, f, caption="🔳 QR Code")
-            os.remove(f)
-            await event.delete()
+        total = len(users)
+        if total == 0:
+            await update.message.reply_text(
+                f"⚠️ {bold_serif('No eligible users found.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
 
-        @client.on(events.NewMessage(pattern=r"\.tts", outgoing=True))
-        async def sid_tts(event):
-            txt = event.raw_text.replace(".tts", "").strip()
-            if not txt:
-                return await _safe_edit(event, "❌ Provide text.")
-            await _safe_edit(event, "🗣️ Generating TTS...")
-            f = f"tts_{event.id}.mp3"
-            gTTS(text=txt, lang="hi").save(f)
-            await client.send_file(event.chat_id, f, voice_note=True)
-            os.remove(f)
-            await event.delete()
+        progress = await update.message.reply_text(
+            f"📢 {bold_serif('Broadcast Starting')}...\n"
+            f"⏳ {script('Preparing')} • {mono(f'0/{total}')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
-        @client.on(events.NewMessage(pattern=r"\.copy", outgoing=True))
-        async def sid_copy(event):
-            tgt = await get_target(event, event.raw_text.replace(".copy", "").strip())
-            if not tgt:
-                return await _safe_edit(event, "❌ Provide target.")
-            await _safe_edit(event, "🔄 Cloning Profile...")
+        sent = 0
+        failed = 0
+        for index, target_uid in enumerate(users, 1):
             try:
-                target_ent = await client.get_entity(tgt)
-                me = await client.get_me()
-                if not U_STATE['original_profile']:
-                    U_STATE['original_profile']['first'] = me.first_name or ""
-                    U_STATE['original_profile']['last'] = me.last_name or ""
-                await client(UpdateProfileRequest(first_name=target_ent.first_name or "",
-                                                  last_name=target_ent.last_name or ""))
-                ph = await client.download_profile_photo(target_ent)
-                if ph:
-                    my_ph = await client.get_profile_photos('me')
-                    if my_ph:
-                        await client(DeletePhotosRequest(id=[p for p in my_ph]))
-                    await client(UploadProfilePhotoRequest(file=await client.upload_file(ph)))
-                    os.remove(ph)
-                await _safe_edit(event, f"🎭 Identity theft successful. Now acting as {target_ent.first_name}")
+                if reply:
+                    await context.bot.copy_message(
+                        chat_id=target_uid,
+                        from_chat_id=update.effective_chat.id,
+                        message_id=reply.message_id,
+                    )
+                else:
+                    await context.bot.send_message(
+                        chat_id=target_uid,
+                        text=text_arg,
+                    )
+                sent += 1
             except Exception as e:
-                await _safe_edit(event, f"❌ Error: {e}")
+                failed += 1
+                logger.warning(f"Broadcast failed for {target_uid}: {str(e)[:100]}")
 
-        @client.on(events.NewMessage(pattern=r"\.back", outgoing=True))
-        async def sid_back(event):
-            if not U_STATE['original_profile']:
-                return await _safe_edit(event, "❌ No backup found.")
-            await _safe_edit(event, "🔄 Reverting...")
-            try:
-                await client(UpdateProfileRequest(first_name=U_STATE['original_profile']['first'],
-                                                  last_name=U_STATE['original_profile']['last']))
-                await _safe_edit(event, "✅ Original Profile Restored!")
-            except Exception as e:
-                await _safe_edit(event, f"❌ Error: {e}")
-
-        # ── 5. ADMIN, MUTE & PROTECT ──
-        @client.on(events.NewMessage(pattern=r"\.mute"))
-        async def sid_mute(event):
-            if not is_authorized(event):
-                return
-            tgt = await get_target(event, event.raw_text.replace(".mute", "").strip())
-            if tgt:
-                U_STATE['muted'][tgt] = event.chat_id
-                await _safe_edit(event, "🤫 Muted in this chat.")
-
-        @client.on(events.NewMessage(pattern=r"\.unmute"))
-        async def sid_unmute(event):
-            if not is_authorized(event):
-                return
-            tgt = await get_target(event, event.raw_text.replace(".unmute", "").strip())
-            if tgt in U_STATE['muted']:
-                del U_STATE['muted'][tgt]
-                await _safe_edit(event, "🔊 Unmuted.")
-
-        @client.on(events.NewMessage())
-        async def enforce_mute(event):
-            if event.sender_id in U_STATE['muted'] and event.chat_id == U_STATE['muted'][event.sender_id]:
+            if index == 1 or index % 10 == 0 or index == total:
+                frames = ["📢", "📣", "🚀", "✨", "📡"]
+                frame = frames[(index // 10) % len(frames)]
                 try:
-                    await event.delete()
-                except:
+                    await progress.edit_text(
+                        f"{frame} {bold_serif('Broadcasting')}...\n"
+                        f"⏳ {script('Progress')} • {mono(f'{index}/{total}')}\n"
+                        f"✅ {mono(str(sent))}  ❌ {mono(str(failed))}",
+                        parse_mode=ParseMode.MARKDOWN,
+                    )
+                except Exception:
                     pass
 
-        @client.on(events.NewMessage(pattern=r"\.safe"))
-        async def sid_safe(event):
-            if not is_authorized(event):
-                return
-            tgt = await get_target(event, event.raw_text.replace(".safe", "").strip())
-            if tgt:
-                if event.chat_id not in U_STATE['safe']:
-                    U_STATE['safe'][event.chat_id] = set()
-                U_STATE['safe'][event.chat_id].add(tgt)
-                await _safe_edit(event, "🛡 User is safe from deletion.")
-
-        @client.on(events.NewMessage(pattern=r"\.unsafe"))
-        async def sid_unsafe(event):
-            if not is_authorized(event):
-                return
-            tgt = await get_target(event, event.raw_text.replace(".unsafe", "").strip())
-            if tgt and event.chat_id in U_STATE['safe'] and tgt in U_STATE['safe'][event.chat_id]:
-                U_STATE['safe'][event.chat_id].discard(tgt)
-                await _safe_edit(event, "⚠️ User is unsafe.")
-
-        @client.on(events.NewMessage(pattern=r"\.purge"))
-        async def sid_purge(event):
-            if not is_authorized(event):
-                return
-            if event.is_reply:
-                msgs = [m.id async for m in client.iter_messages(event.chat_id, min_id=event.reply_to_msg_id - 1)]
-                if msgs:
-                    for i in range(0, len(msgs), 100):
-                        await client.delete_messages(event.chat_id, msgs[i:i+100])
-                    x = await client.send_message(event.chat_id, f"🗑️ Purged {len(msgs)-1} messages.")
-                    await asyncio.sleep(2)
-                    await x.delete()
-
-        # ── 6. MENU ──
-        @client.on(events.NewMessage(pattern=r"\.sid_menu|\.menu"))
-        async def sid_menu(event):
-            if not is_authorized(event):
-                return
-            MENU = f"""
-            ===================================
-                     {gender} SID MASTER MENU 👑
-            ===================================
-            🔥 **RAID COMMANDS**
-            • `.attack` / `.sattack` (Stop)
-            • `.roast` / `.sroast`
-            • `.rebel` / `.srebel`
-            • `.sid` / `.ssid`
-            • `.homies` / `.shomies`
-
-            🚀 **POWER SPAM COMMANDS**
-            • `.spam <count> <text>`
-            • `.mixspam <count>`
-
-            ✨ **ANIMATIONS & EFFECTS**
-            • `.hack` (Terminal Hack)
-            • `.load` (Progress Bar)
-            • `.magic` (Text Reveal)
-            • `.heart` (Love Burst)
-            • `.matrix` (Binary Code)
-            • `.explode` (Bomb Effect)
-            • `.typing [text]`
-
-            🛠 **UTILITIES**
-            • `.song [name]` (YT Download)
-            • `.qr [text]` (Generate QR)
-            • `.tts [text]` (Voice note)
-            • `.copy [reply]` / `.back` (Clone)
-            • `.ping` / `.alive` / `.sid`
-
-            🛑 **ADMIN / CONTROL**
-            • `.mute` / `.unmute`
-            • `.safe` / `.unsafe`
-            • `.purge` (Reply to start)
-
-            ===================================
-            Powered by SID Core v6.0
-            ==================================="""
-            await _safe_edit(event, MENU)
-
-        await client.run_until_disconnected()
-
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(operational_lifecycle())
-    except Exception as e:
-        logger.error(f"Context dropped: {e}")
-        if chat_id:
-            bot.send_message(chat_id, f"❌ Userbot crashed: {e}")
-    finally:
-        active_runtimes.pop((user_id, slot), None)
-
-# ──────────────────────────────────────────────────────────────────────────────
-# SYSTEM METRICS & SHUTDOWN (Multi‑slot aware)
-# ──────────────────────────────────────────────────────────────────────────────
-@bot.callback_query_handler(func=lambda call: call.data == "telemetry")
-def display_telemetry(call):
-    txt = f"📊 **SID TELEMETRY DATA**\n━━━━━━━━━━━━━━━━━━━━\n🟢 **Active Containers:** `{len(active_runtimes)}`\n🧠 **Host RAM Usage:** `{psutil.virtual_memory().percent}%`\n⚙️ **Host CPU Load:** `{psutil.cpu_percent}%`\n\n» *Architecture fully dynamic & scaled.*"
-    bot.edit_message_text(txt, call.message.chat.id, call.message.message_id, parse_mode='Markdown')
-
-@bot.callback_query_handler(func=lambda call: call.data == "terminate")
-def terminate_worker(call):
-    user_id = call.from_user.id
-    # Show list of slots to choose from
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT slot FROM hosted_sessions WHERE user_id=?', (user_id,))
-        slots = [r[0] for r in c.fetchall()]
-        conn.close()
-    if not slots:
-        bot.answer_callback_query(call.id, "❌ No active runtimes detected.", show_alert=True)
-        return
-    # For simplicity, terminate all active slots of user
-    for slot in slots:
-        key = (user_id, slot)
-        if key in active_runtimes:
-            active_runtimes[key]['loop'].create_task(active_runtimes[key]['client'].disconnect())
-    bot.answer_callback_query(call.id, f"🛑 Terminated {len(slots)} SID Container(s).", show_alert=True)
-
-# ════════════════════════════════════════════════════════════════════════════════
-# ─── ADDITIONS FOR OWNER, SUDO, BLOCK, ETC. (Multi‑slot aware) ───
-# ════════════════════════════════════════════════════════════════════════════════
-
-OWNER_ID = 123456789  # ← REPLACE WITH YOUR OWNER TELEGRAM ID
-SUPPORT_USERNAME = "@YourSupport"  # ← REPLACE
-MAX_ACCOUNTS_PER_USER = 5   # Max slots per user
-MAX_USERBOTS = 50
-START_TIME = time.time()
-
-def is_owner(user_id):
-    return user_id == OWNER_ID
-
-def is_premium(user_id):
-    return is_owner(user_id) or db_is_sudo(user_id)
-
-def db_is_sudo(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT 1 FROM sudo_users WHERE user_id = ?', (user_id,))
-        res = c.fetchone() is not None
-        conn.close()
-        return res
-
-def get_accounts(user_id):
-    """Return list of dictionaries for all slots of a user."""
-    accounts = []
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT slot, session_key, gender, system_preset, api_id, api_hash FROM hosted_sessions WHERE user_id = ? ORDER BY slot', (user_id,))
-        rows = c.fetchall()
-        conn.close()
-    for row in rows:
-        slot, session_key, gender, system_preset, api_id, api_hash = row
-        accounts.append({
-            'slot': slot,
-            'session_key': session_key,
-            'gender': gender,
-            'system_preset': system_preset,
-            'api_id': api_id,
-            'api_hash': api_hash,
-            'hosted': True,
-            'hosted_at': int(time.time()),
-        })
-    return accounts
-
-def remove_account(user_id, slot):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM hosted_sessions WHERE user_id = ? AND slot = ?', (user_id, slot))
-        conn.commit()
-        conn.close()
-    # Remove session file
-    session_path = os.path.join(RUNTIMES_DIR, f"active_{user_id}_{slot}.session")
-    if os.path.exists(session_path):
-        os.remove(session_path)
-
-def get_all_users():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT DISTINCT user_id FROM hosted_sessions')
-        rows = c.fetchall()
-        conn.close()
-    return [str(r[0]) for r in rows]
-
-def hosted_count():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT COUNT(*) FROM hosted_sessions')
-        cnt = c.fetchone()[0]
-        conn.close()
-    return cnt
-
-def user_count():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT COUNT(DISTINCT user_id) FROM hosted_sessions')
-        cnt = c.fetchone()[0]
-        conn.close()
-    return cnt
-
-def block_user(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('INSERT OR IGNORE INTO blocked_users (user_id) VALUES (?)', (user_id,))
-        conn.commit()
-        conn.close()
-
-def unblock_user(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM blocked_users WHERE user_id = ?', (user_id,))
-        conn.commit()
-        conn.close()
-
-def is_blocked(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT 1 FROM blocked_users WHERE user_id = ?', (user_id,))
-        res = c.fetchone() is not None
-        conn.close()
-        return res
-
-def get_blocked():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT user_id FROM blocked_users')
-        rows = [r[0] for r in c.fetchall()]
-        conn.close()
-        return rows
-
-def add_sudo(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('INSERT OR IGNORE INTO sudo_users (user_id) VALUES (?)', (user_id,))
-        conn.commit()
-        conn.close()
-
-def remove_sudo(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM sudo_users WHERE user_id = ?', (user_id,))
-        conn.commit()
-        conn.close()
-
-def get_sudo_users():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT user_id FROM sudo_users')
-        rows = [r[0] for r in c.fetchall()]
-        conn.close()
-        return rows
-
-def set_welcome_video(data):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM welcome_video')
-        c.execute('INSERT INTO welcome_video (id, file_id, is_video_note) VALUES (1, ?, ?)',
-                  (data['file_id'], 1 if data['is_video_note'] else 0))
-        conn.commit()
-        conn.close()
-
-def remove_welcome_video():
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM welcome_video')
-        conn.commit()
-        conn.close()
-
-def save_api_profile(api_id, api_hash):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('DELETE FROM api_config')
-        c.execute('INSERT INTO api_config (id, api_id, api_hash) VALUES (1, ?, ?)', (api_id, api_hash))
-        conn.commit()
-        conn.close()
-
-class RunnerWrapper:
-    @staticmethod
-    def is_running(user_id, slot):
-        return (user_id, slot) in active_runtimes
-
-    @staticmethod
-    def get_uptime(user_id, slot):
-        # Not stored; return N/A
-        return "N/A"
-
-    @staticmethod
-    def running_count():
-        return len(active_runtimes)
-
-    @staticmethod
-    def start_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        with GLOBAL_DB_LOCK:
-            conn = sqlite3.connect(DATABASE_PATH)
-            c = conn.cursor()
-            c.execute('SELECT gender, system_preset FROM hosted_sessions WHERE user_id = ? AND slot = ?', (uid, slot))
-            row = c.fetchone()
-            conn.close()
-        if row:
-            gender, preset = row
-            threading.Thread(target=deploy_live_userbot_runtime, args=(None, uid, slot, gender, preset), daemon=True).start()
-            return True
-        return False
-
-    @staticmethod
-    def restart_userbot(uid, slot, api_id, api_hash, session_string, uid_str):
-        if (uid, slot) in active_runtimes:
-            try:
-                loop = active_runtimes[(uid, slot)]['loop']
-                loop.create_task(active_runtimes[(uid, slot)]['client'].disconnect())
-            except:
-                pass
-            active_runtimes.pop((uid, slot), None)
-        return RunnerWrapper.start_userbot(uid, slot, api_id, api_hash, session_string, uid_str)
-
-    @staticmethod
-    def stop_userbot(uid, slot):
-        if (uid, slot) in active_runtimes:
-            try:
-                loop = active_runtimes[(uid, slot)]['loop']
-                loop.create_task(active_runtimes[(uid, slot)]['client'].disconnect())
-            except:
-                pass
-            active_runtimes.pop((uid, slot), None)
-        return True
-
-    @staticmethod
-    def stop_all_for_user(uid):
-        accounts = get_accounts(uid)
-        for acct in accounts:
-            RunnerWrapper.stop_userbot(uid, acct['slot'])
-
-runner = RunnerWrapper()
-
-def uptime_str():
-    e = int(time.time() - START_TIME)
-    h, r = divmod(e, 3600); m, s = divmod(r, 60)
-    return f"{h}h {m}m {s}s"
-
-def _phone_label(user_id):
-    with GLOBAL_DB_LOCK:
-        conn = sqlite3.connect(DATABASE_PATH)
-        c = conn.cursor()
-        c.execute('SELECT phone FROM user_metadata WHERE user_id = ?', (user_id,))
-        row = c.fetchone()
-        conn.close()
-    return row[0] if row else "Unknown"
-
-# ─── BOT COMMANDS (Multi‑slot aware) ───
-@bot.message_handler(commands=['myaccounts'])
-def cmd_myaccounts(message):
-    uid = message.from_user.id
-    if is_blocked(uid):
-        bot.reply_to(message, "🚫 You are blocked.")
-        return
-    accounts = get_accounts(uid)
-    if not accounts:
-        bot.reply_to(message, "📱 No accounts hosted. Use /host to deploy.")
-        return
-    lines = []
-    for acct in accounts:
-        slot = acct['slot']
-        alive = runner.is_running(uid, slot)
-        phone = _phone_label(uid)  # same phone for all slots? adjust if needed
-        status = "🟢 Running" if alive else "🔴 Stopped"
-        lines.append(f"📱 Account #{slot}\nPhone: {phone}\nStatus: {status}")
-    bot.reply_to(message, "\n\n".join(lines))
-
-@bot.message_handler(commands=['status'])
-def cmd_status(message):
-    uid = message.from_user.id
-    if is_blocked(uid):
-        return
-    accounts = get_accounts(uid)
-    if not accounts:
-        bot.reply_to(message, "❌ No userbot found.")
-        return
-    lines = []
-    for acct in accounts:
-        slot = acct['slot']
-        alive = runner.is_running(uid, slot)
-        uptime = runner.get_uptime(uid, slot) if alive else "—"
-        phone = _phone_label(uid)
-        icon = "🟢" if alive else "🔴"
-        lines.append(f"{icon} Account #{slot} — {phone}\n   Uptime: {uptime}")
-    bot.reply_to(message, "📊 Userbot Status\n\n" + "\n\n".join(lines))
-
-@bot.message_handler(commands=['restart'])
-def cmd_restart(message):
-    uid = message.from_user.id
-    if is_blocked(uid):
-        return
-    accounts = get_accounts(uid)
-    if not accounts:
-        bot.reply_to(message, "❌ No userbot to restart.")
-        return
-    # For simplicity, restart the first slot (or ask user)
-    acct = accounts[0]
-    slot = acct['slot']
-    msg = bot.reply_to(message, "🔄 Restarting...")
-    ok = runner.restart_userbot(uid, slot, "", "", "", str(uid))
-    if ok:
-        bot.edit_message_text("✅ Account restarted successfully!", msg.chat.id, msg.message_id)
-    else:
-        bot.edit_message_text("❌ Restart failed.", msg.chat.id, msg.message_id)
-
-@bot.message_handler(commands=['logout'])
-def cmd_logout(message):
-    uid = message.from_user.id
-    if is_blocked(uid):
-        return
-    accounts = get_accounts(uid)
-    if not accounts:
-        bot.reply_to(message, "❌ No account to logout.")
-        return
-    # If multiple accounts, list slots with buttons
-    if len(accounts) == 1:
-        slot = accounts[0]['slot']
-        markup = types.InlineKeyboardMarkup()
-        markup.row(
-            types.InlineKeyboardButton("✅ Yes, Logout", callback_data=f"confirm_logout_{slot}"),
-            types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout")
+        await progress.edit_text(
+            f"{TOP}\n"
+            f"║  ✅  {bold_serif('Broadcast Complete')}  ✅  ║\n"
+            f"{BOT}\n\n"
+            f"📨 {sans_bold('Sent')}    : {mono(str(sent))}\n"
+            f"❌ {sans_bold('Failed')}  : {mono(str(failed))}\n"
+            f"👥 {sans_bold('Total')}   : {mono(str(total))}\n\n"
+            f"{DIV}\n"
+            f"✨ {italic_serif('Broadcast finished successfully.')}",
+            parse_mode=ParseMode.MARKDOWN,
         )
-        bot.reply_to(message, f"⚠️ Logout slot {slot}? This will delete the session.", reply_markup=markup)
-    else:
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        for acct in accounts:
-            slot = acct['slot']
-            markup.add(types.InlineKeyboardButton(f"Logout Slot {slot}", callback_data=f"confirm_logout_{slot}"))
-        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="cancel_logout"))
-        bot.reply_to(message, "Select slot to logout:", reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_logout_"))
-def confirm_logout_slot(call):
-    slot = int(call.data.split("_")[-1])
-    uid = call.from_user.id
-    runner.stop_userbot(uid, slot)
-    remove_account(uid, slot)
-    bot.answer_callback_query(call.id, "Logged out successfully.")
-    bot.edit_message_text(f"👋 Slot {slot} logged out. Use /host to deploy again.", call.message.chat.id, call.message.message_id)
 
-@bot.callback_query_handler(func=lambda call: call.data == "cancel_logout")
-def cancel_logout(call):
-    bot.answer_callback_query(call.id, "Logout cancelled.")
-    bot.edit_message_text("Logout cancelled.", call.message.chat.id, call.message.message_id)
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /myaccounts — list all accounts with inline manage buttons
+    # ════════════════════════════════════════════════════════════════════════════════
 
-@bot.message_handler(commands=['support'])
-def cmd_support(message):
-    bot.reply_to(message, f"📞 Support: {SUPPORT_USERNAME}\nFor help, use /help or contact admin.")
+    async def cmd_myaccounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        uid      = update.effective_user.id
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
 
-@bot.message_handler(commands=['help'])
-def cmd_help(message):
-    text = """
-❓ Help & Commands
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔹 /start       - Welcome screen
-🔹 /host        - Deploy userbot (choose slot)
-🔹 /myaccounts  - View accounts (all slots)
-🔹 /status      - Check status
-🔹 /restart     - Restart first slot userbot
-🔹 /logout      - Logout account (select slot)
-🔹 /support     - Contact support
-🔹 /help        - This menu
-    """
-    bot.reply_to(message, text)
-
-@bot.message_handler(commands=['stats'])
-def cmd_stats(message):
-    if not is_owner(message.from_user.id):
-        bot.reply_to(message, "🔒 Owner only.")
-        return
-    total = user_count()
-    hosted = hosted_count()
-    running = runner.running_count()
-    blocked = len(get_blocked())
-    sudos = len(get_sudo_users())
-    bot.reply_to(message, f"""
-📊 Bot Statistics
-━━━━━━━━━━━━━━━━━━━━
-👥 Total Users: {total}
-🚀 Hosted: {hosted}
-🟢 Running: {running}
-🔴 Stopped: {hosted - running}
-🚫 Blocked: {blocked}
-👑 Sudo: {sudos}
-🕒 Uptime: {uptime_str()}
-    """)
-
-@bot.message_handler(commands=['broadcast'])
-def cmd_broadcast(message):
-    if not is_owner(message.from_user.id):
-        return
-    if not message.reply_to_message and not message.text.replace('/broadcast','').strip():
-        bot.reply_to(message, "Reply to a message or provide text: /broadcast Hello")
-        return
-    users = get_all_users()
-    if not users:
-        bot.reply_to(message, "No users to broadcast.")
-        return
-    sent = 0
-    failed = 0
-    for uid_str in users:
-        try:
-            uid = int(uid_str)
-            if is_blocked(uid):
-                continue
-            if message.reply_to_message:
-                bot.copy_message(uid, message.chat.id, message.reply_to_message.message_id)
-            else:
-                bot.send_message(uid, message.text.replace('/broadcast','').strip())
-            sent += 1
-        except Exception as e:
-            failed += 1
-    bot.reply_to(message, f"✅ Broadcast sent to {sent} users. Failed: {failed}")
-
-@bot.message_handler(commands=['sudolist'])
-def cmd_sudolist(message):
-    if not is_owner(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) >= 3 and args[1] == 'add':
-        try:
-            uid = int(args[2])
-            add_sudo(uid)
-            bot.reply_to(message, f"✅ Added {uid} to sudo.")
-        except:
-            bot.reply_to(message, "❌ Invalid ID.")
-        return
-    if len(args) >= 3 and args[1] == 'del':
-        try:
-            uid = int(args[2])
-            remove_sudo(uid)
-            bot.reply_to(message, f"✅ Removed {uid} from sudo.")
-        except:
-            bot.reply_to(message, "❌ Invalid ID.")
-        return
-    sudos = get_sudo_users()
-    if not sudos:
-        bot.reply_to(message, "No sudo users.")
-    else:
-        bot.reply_to(message, "👑 Sudo Users:\n" + "\n".join(str(u) for u in sudos))
-
-@bot.message_handler(commands=['block'])
-def cmd_block(message):
-    if not is_owner(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) < 2:
-        bot.reply_to(message, "Usage: /block <user_id>")
-        return
-    try:
-        uid = int(args[1])
-        if uid == OWNER_ID:
-            bot.reply_to(message, "Cannot block owner.")
+        if not hosted:
+            keyboard = [[InlineKeyboardButton("🚀 Host My First Userbot", callback_data="host")]]
+            await update.message.reply_text(
+                f"📱 {bold_serif('No Accounts Hosted Yet')}\n\n"
+                f"{script('Get started with /host')}\n"
+                f"{italic_serif('Host up to')} {mono(str(MAX_ACCOUNTS_PER_USER))} {italic_serif('accounts!')}",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
             return
-        block_user(uid)
-        runner.stop_all_for_user(uid)
-        bot.reply_to(message, f"🚫 User {uid} blocked.")
-    except:
-        bot.reply_to(message, "Invalid ID.")
 
-@bot.message_handler(commands=['unblock'])
-def cmd_unblock(message):
-    if not is_owner(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) < 2:
-        bot.reply_to(message, "Usage: /unblock <user_id>")
-        return
-    try:
-        uid = int(args[1])
-        unblock_user(uid)
-        bot.reply_to(message, f"✅ User {uid} unblocked.")
-    except:
-        bot.reply_to(message, "Invalid ID.")
+        lines = []
+        keyboard = []
+        for acct in hosted:
+            slot   = acct.get("slot", 0)
+            alive  = runner.is_running(uid, slot)
+            uptime = runner.get_uptime(uid, slot) if alive else None
+            icon   = "🟢" if alive else "🔴"
+            phone  = _phone_label(acct)
+            up_str = f"  ⏱️ {uptime}" if uptime else ""
+            lines.append(
+                f"{icon} {bold_serif('Acc #' + str(slot+1))} — {mono(phone)}{up_str}"
+            )
+            row = []
+            if alive:
+                row.append(InlineKeyboardButton(f"🔄 Restart #{slot+1}", callback_data=f"restart_acc_{slot}"))
+            else:
+                row.append(InlineKeyboardButton(f"▶️ Start #{slot+1}",   callback_data=f"start_acc_{slot}"))
+            row.append(InlineKeyboardButton(f"🗑️ Logout #{slot+1}", callback_data=f"logout_acc_{slot}"))
+            keyboard.append(row)
 
-@bot.message_handler(commands=['blockeduser'])
-def cmd_blockeduser(message):
-    if not is_owner(message.from_user.id):
-        return
-    blocked = get_blocked()
-    if not blocked:
-        bot.reply_to(message, "No blocked users.")
-    else:
-        bot.reply_to(message, "🚫 Blocked users:\n" + "\n".join(str(u) for u in blocked))
+        if len(hosted) < MAX_ACCOUNTS_PER_USER:
+            keyboard.append([InlineKeyboardButton("➕ Add Another Account", callback_data="add_acc")])
 
-@bot.message_handler(commands=['secretfunction'])
-def cmd_secretfunction(message):
-    if not is_owner(message.from_user.id):
-        return
-    bot.reply_to(message, """
-🔐 Secret Commands
-━━━━━━━━━━━━━━━━━━━━
-🔹 /sudolist add <uid>
-🔹 /sudolist del <uid>
-🔹 /block <uid>
-🔹 /unblock <uid>
-🔹 /blockeduser
-🔹 /stats
-🔹 /broadcast
-🔹 /restartall
-🔹 /setdp
-🔹 /setwelcomevideo
-🔹 /removewelcomevideo
-🔹 /setapi <id> <hash>
-    """)
+        header = (
+            f"{TOP}\n"
+            f"║  📱  {double_struck('My Accounts')} ({len(hosted)}/{MAX_ACCOUNTS_PER_USER})  📱  ║\n"
+            f"{BOT}\n\n"
+        )
+        body = "\n".join(lines)
+        footer = f"\n\n{DIV}\n🔹 /host {italic_serif('— add account')}"
 
-@bot.message_handler(commands=['setdp'])
-def cmd_setdp(message):
-    if not is_owner(message.from_user.id):
-        return
-    if not message.reply_to_message or not message.reply_to_message.photo:
-        bot.reply_to(message, "Reply to a photo with /setdp")
-        return
-    photo = message.reply_to_message.photo[-1]
-    file_id = photo.file_id
-    try:
-        bot.set_chat_photo(photo=file_id)
-        bot.reply_to(message, "✅ Display photo updated.")
-    except Exception as e:
-        bot.reply_to(message, f"❌ Failed: {e}")
+        await update.message.reply_text(
+            header + body + footer,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
 
-@bot.message_handler(commands=['setwelcomevideo'])
-def cmd_setwelcomevideo(message):
-    if not is_owner(message.from_user.id):
-        return
-    if not message.reply_to_message:
-        bot.reply_to(message, "Reply to a video or video note.")
-        return
-    vid = message.reply_to_message.video
-    vnote = message.reply_to_message.video_note
-    if vid:
-        set_welcome_video({'file_id': vid.file_id, 'is_video_note': False})
-        bot.reply_to(message, "✅ Welcome video set.")
-    elif vnote:
-        set_welcome_video({'file_id': vnote.file_id, 'is_video_note': True})
-        bot.reply_to(message, "✅ Welcome video note set.")
-    else:
-        bot.reply_to(message, "Reply must be video or video note.")
 
-@bot.message_handler(commands=['removewelcomevideo'])
-def cmd_removewelcomevideo(message):
-    if not is_owner(message.from_user.id):
-        return
-    remove_welcome_video()
-    bot.reply_to(message, "🗑️ Welcome video removed.")
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /status
+    # ════════════════════════════════════════════════════════════════════════════════
 
-@bot.message_handler(commands=['setapi'])
-def cmd_setapi(message):
-    if not is_owner(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) < 3:
-        bot.reply_to(message, "⚠️ Usage: /setapi <api_id> <api_hash>")
-        return
-    try:
-        api_id = int(args[1])
-        api_hash = args[2]
-        save_api_profile(api_id, api_hash)
-        bot.reply_to(message, f"✅ Global API configuration updated successfully!")
-    except ValueError:
-        bot.reply_to(message, "❌ API ID must be a number.")
+    async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        uid      = update.effective_user.id
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
 
-if __name__ == '__main__':
-    logger.info("Starting Keepalive Web Server...")
-    Thread(target=initialize_keepalive_server, daemon=True).start()
-    
-    logger.info("Starting SID Master Hoster Polling...")
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+        if not hosted:
+            await update.message.reply_text(
+                f"❌ {bold_serif('No Userbot Found')}\n\n"
+                f"{script('Deploy one using')} /host",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        import datetime
+        lines = []
+        for acct in hosted:
+            slot     = acct.get("slot", 0)
+            alive    = runner.is_running(uid, slot)
+            uptime   = runner.get_uptime(uid, slot) if alive else "—"
+            hosted_at = acct.get("hosted_at", 0)
+            since = datetime.datetime.fromtimestamp(hosted_at).strftime("%d %b %Y  %H:%M") if hosted_at else "—"
+            icon = "🟢" if alive else "🔴"
+            phone = _phone_label(acct)
+            lines.append(
+                f"{icon} {sans_bold('Account #' + str(slot+1))} — {mono(phone)}\n"
+                f"   ⏱️ {italic_serif('Uptime')} : {mono(uptime)}\n"
+                f"   📅 {italic_serif('Hosted')} : {mono(since)}"
+            )
+
+        footer = ""
+        if any(not runner.is_running(uid, a["slot"]) for a in hosted):
+            footer = f"\n\n🔄 {italic_serif('Use /restart to revive stopped accounts.')}"
+
+        await update.message.reply_text(
+            f"{TOP}\n║  📊  {double_struck('Userbot Status')}  📊  ║\n{BOT}\n\n"
+            + "\n\n".join(lines) +
+            f"\n\n{DIV}"
+            f"\n⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}"
+            f"{footer}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /restart  (single → restart; multiple → show selection)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        uid      = update.effective_user.id
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
+
+        if not hosted:
+            await update.message.reply_text(
+                f"❌ {bold_serif('No Userbot Found.')} {script('Use /host first.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        if len(hosted) == 1:
+            acct = hosted[0]
+            slot = acct["slot"]
+            await _do_restart(update, uid, slot, acct)
+            return
+
+        # Multiple accounts — show selection
+        keyboard = []
+        for acct in hosted:
+            slot  = acct["slot"]
+            phone = _phone_label(acct)
+            alive = runner.is_running(uid, slot)
+            icon  = "🟢" if alive else "🔴"
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"{icon} Restart #{slot+1} — {phone}",
+                    callback_data=f"restart_acc_{slot}",
+                )
+            ])
+        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_action")])
+
+        await update.message.reply_text(
+            f"🔄 {bold_serif('Which account to restart?')}\n\n"
+            f"{script('Select below')} 👇",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+
+
+    async def _do_restart(update_or_query, uid, slot, acct):
+        is_cb = hasattr(update_or_query, "callback_query") and update_or_query.callback_query
+        if is_cb:
+            msg_obj = update_or_query.callback_query.message
+            send = msg_obj.reply_text
+        else:
+            send = update_or_query.message.reply_text
+
+        msg = await send(f"🔄 {sans_bold('Restarting Account')} #{slot+1}...")
+        ok = runner.restart_userbot(
+            uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+            acct.get("session_string", ""), str(uid),
+        )
+        if ok:
+            await msg.edit_text(
+                f"✅ {double_struck('Account #' + str(slot+1) + ' Restarted')}!\n\n"
+                f"🟢 {sans_bold('Status')}: {script('Running')}\n"
+                f"⚡ {italic_serif('Test with')} {mono('.alive')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        else:
+            await msg.edit_text(
+                f"❌ {bold_serif('Restart Failed')}\n\n"
+                f"📩 {script('Contact')} {SUPPORT_USERNAME}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /logout  (single → confirm; multiple → show selection)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        uid      = update.effective_user.id
+        accounts = db.get_accounts(uid)
+        hosted   = [a for a in accounts if a.get("hosted")]
+
+        if not hosted:
+            await update.message.reply_text(
+                f"❌ {italic_serif('Koi active userbot nahi hai.')}"
+            )
+            return
+
+        if len(hosted) == 1:
+            acct = hosted[0]
+            slot = acct["slot"]
+            phone = _phone_label(acct)
+            keyboard = [[
+                InlineKeyboardButton("✅ Haan, Logout Karo", callback_data=f"confirm_logout_{slot}"),
+                InlineKeyboardButton("❌ Cancel",            callback_data="cancel_action"),
+            ]]
+            await update.message.reply_text(
+                f"⚠️ {bold_serif('Logout Confirmation')}\n\n"
+                f"📱 {sans_bold('Account')} : {mono(phone)}\n\n"
+                f"{script('Logout karne se session delete ho jayega.')}\n"
+                f"{italic_serif('Dobara host karne ke liye /host karo.')}",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+            return
+
+        # Multiple accounts — show selection
+        keyboard = []
+        for acct in hosted:
+            slot  = acct["slot"]
+            phone = _phone_label(acct)
+            alive = runner.is_running(uid, slot)
+            icon  = "🟢" if alive else "🔴"
+            keyboard.append([
+                InlineKeyboardButton(
+                    f"{icon} Logout #{slot+1} — {phone}",
+                    callback_data=f"logout_acc_{slot}",
+                )
+            ])
+        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_action")])
+
+        await update.message.reply_text(
+            f"🗑️ {bold_serif('Kaunsa Account Logout Karna Hai?')}\n\n"
+            f"{script('Select below')} 👇",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+
+
+    async def _do_logout(uid, slot):
+        runner.stop_userbot(uid, slot)
+        db.remove_account(uid, slot)
+        session_dir = f"data/sessions/{uid}/{slot}"
+        shutil.rmtree(session_dir, ignore_errors=True)
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /support
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_support(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        await update.message.reply_text(
+            f"{TOP}\n║  📞  {double_struck('Support Center')}  📞  ║\n{BOT}\n\n"
+            f"👤 {sans_bold('Admin')}    : {SUPPORT_USERNAME}\n"
+            f"⚡ {sans_bold('Response')} : {script('Fast')}\n\n"
+            f"{DIV}\n"
+            f"🔧 {bold_serif('Try these first:')}\n\n"
+            f"🔹 /myaccounts — {italic_serif('Sab accounts dekho')}\n"
+            f"🔹 /restart    — {italic_serif('Userbot restart karo')}\n"
+            f"🔹 /status     — {italic_serif('Status check karo')}\n"
+            f"🔹 /logout → /host — {italic_serif('Re-deploy karo')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /supportraid (Premium)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_supportraid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await check_blocked(update): return
+        if not await premium_only(update): return
+        args   = context.args
+        target = " ".join(args) if args else None
+        if not target:
+            await update.message.reply_text(
+                f"⚔️ {bold_serif('Pro Support Raid')}\n\n"
+                f"📌 {sans_bold('Usage')}: {mono('/supportraid @username')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+        await update.message.reply_text(
+            f"{TOP}\n║  ⚔️  {bold_serif('Support Raid Launched')}  ⚔️  ║\n{BOT}\n\n"
+            f"🎯 {sans_bold('Target')} : {mono(target)}\n"
+            f"🌪️ {script('All premium userbots activated!')}\n"
+            f"⚡ {fraktur('Raid Mode')}: {double_struck('MAX POWER')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /restartall (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_restartall(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        msg   = await update.message.reply_text(f"🔄 {sans_bold('Restarting All Userbots')}...")
+        count = 0
+        for uid_str in db.get_all_users():
+            uid = int(uid_str)
+            if db.is_blocked(uid): continue
+            for acct in db.get_accounts(uid):
+                if not acct.get("hosted") or not acct.get("session_string"): continue
+                slot = acct["slot"]
+                ok = runner.restart_userbot(
+                    uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+                    acct["session_string"], uid_str,
+                )
+                if ok: count += 1
+        await msg.edit_text(
+            f"✅ {double_struck('Restart Complete')}\n\n"
+            f"🟢 {sans_bold('Restarted')}: {mono(str(count))} {script('userbots')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /refresh (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_refresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        await update.message.reply_text(
+            f"🔁 {bold_serif('Bot State Refreshed')}\n\n"
+            f"🟢 {sans_bold('Running')} : {mono(str(runner.running_count()))}\n"
+            f"📦 {sans_bold('Total')}   : {mono(str(db.hosted_count()))}\n"
+            f"🕒 {sans_bold('Uptime')}  : {mono(uptime_str())}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /sudolist (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_sudolist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        args  = context.args
+        sudos = db.get_sudo_users()
+
+        if args and args[0] == "add" and len(args) > 1:
+            try:
+                db.add_sudo(int(args[1]))
+                await update.message.reply_text(
+                    f"✅ {mono(args[1])} {script('added to Sudo Users.')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            except: await update.message.reply_text("❌ Invalid ID.")
+            return
+
+        if args and args[0] == "del" and len(args) > 1:
+            try:
+                db.remove_sudo(int(args[1]))
+                await update.message.reply_text(
+                    f"✅ {mono(args[1])} {script('removed from Sudo Users.')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            except: await update.message.reply_text("❌ Invalid ID.")
+            return
+
+        if not sudos:
+            await update.message.reply_text(
+                f"📋 {bold_serif('No Sudo Users yet.')}\n\nAdd: {mono('/sudolist add <uid>')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        lines = "\n".join(f"  👑 {mono(str(u))}" for u in sudos)
+        await update.message.reply_text(
+            f"{TOP}\n║  👑  {double_struck('Sudo Users')} ({len(sudos)})  👑  ║\n{BOT}\n\n"
+            f"{lines}\n\n{DIV}\n"
+            f"➕ {mono('/sudolist add <uid>')}\n"
+            f"➖ {mono('/sudolist del <uid>')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /setdp (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_setdp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        if not update.message.reply_to_message or not update.message.reply_to_message.photo:
+            await update.message.reply_text(f"📸 {script('Kisi photo ko reply karo.')}")
+            return
+        photo = update.message.reply_to_message.photo[-1]
+        file  = await context.bot.get_file(photo.file_id)
+        data  = await file.download_as_bytearray()
+        from io import BytesIO
+        try:
+            await context.bot.set_my_profile_photo(BytesIO(bytes(data)))
+            await update.message.reply_text(f"✅ {bold_serif('Display Photo Updated')}!")
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ {sans_bold('Failed')}: {mono(str(e)[:80])}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /block  /unblock  /blockeduser (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        if not context.args:
+            await update.message.reply_text(
+                f"📌 {sans_bold('Usage')}: {mono('/block <user_id>')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+        try:
+            target = int(context.args[0])
+            if target == OWNER_ID:
+                await update.message.reply_text(f"❌ {italic_serif('Owner ko block nahi kar sakte.')}")
+                return
+            db.block_user(target)
+            runner.stop_all_for_user(target)
+            await update.message.reply_text(
+                f"🚫 {bold_serif('User Blocked')}\n\n"
+                f"🆔 {mono(str(target))}\n"
+                f"🔴 {script('All userbots stopped.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except ValueError:
+            await update.message.reply_text("❌ Invalid ID.")
+
+
+    async def cmd_unblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        if not context.args:
+            await update.message.reply_text(
+                f"📌 {sans_bold('Usage')}: {mono('/unblock <user_id>')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+        try:
+            db.unblock_user(int(context.args[0]))
+            await update.message.reply_text(
+                f"✅ {bold_serif('User Unblocked')}\n🆔 {mono(context.args[0])}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except ValueError:
+            await update.message.reply_text("❌ Invalid ID.")
+
+
+    async def cmd_blockeduser(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        blocked = db.get_blocked()
+        if not blocked:
+            await update.message.reply_text(f"✅ {script('No blocked users.')}")
+            return
+        lines = "\n".join(f"  🚫 {mono(str(u))}" for u in blocked)
+        await update.message.reply_text(
+            f"{TOP}\n║  🚫  {double_struck('Blocked Users')} ({len(blocked)})  🚫  ║\n{BOT}\n\n"
+            f"{lines}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /stats (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        total   = db.user_count()
+        hosted  = db.hosted_count()
+        running = runner.running_count()
+        blocked = len(db.get_blocked())
+        sudos   = len(db.get_sudo_users())
+
+        await update.message.reply_text(
+            f"{TOP}\n║  📊  {double_struck('Bot Statistics')}  📊  ║\n{BOT}\n\n"
+            f"👥 {sans_bold('Total Users')}    : {double_struck(str(total))}\n"
+            f"🚀 {sans_bold('Hosted Accounts')}: {double_struck(str(hosted))}\n"
+            f"🟢 {sans_bold('Running')}        : {double_struck(str(running))}\n"
+            f"🔴 {sans_bold('Stopped')}        : {double_struck(str(hosted - running))}\n"
+            f"🚫 {sans_bold('Blocked')}        : {double_struck(str(blocked))}\n"
+            f"👑 {sans_bold('Sudo Users')}     : {double_struck(str(sudos))}\n"
+            f"📦 {sans_bold('Max Slots')}      : {double_struck(str(MAX_USERBOTS))}\n"
+            f"{DIV}\n"
+            f"🕒 {sans_bold('Bot Uptime')} : {mono(uptime_str())}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /secretfunction (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_secretfunction(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        await update.message.reply_text(
+            f"{TOP}\n║  🔐  {bold_serif('Secret Commands')}  🔐  ║\n{BOT}\n\n"
+            f"🔺 {mono('/sudolist add <uid>')}  — {fraktur('Add Premium User')}\n"
+            f"🔺 {mono('/sudolist del <uid>')}  — {fraktur('Remove Premium User')}\n"
+            f"🔺 {mono('/block <uid>')}         — {fraktur('Ban & Kill All Userbots')}\n"
+            f"🔺 {mono('/unblock <uid>')}       — {fraktur('Unban User')}\n"
+            f"🔺 {mono('/restartall')}          — {fraktur('Restart All Userbots')}\n"
+            f"🔺 {mono('/refresh')}             — {fraktur('Refresh Bot State')}\n"
+            f"🔺 {mono('/stats')}               — {fraktur('Full Statistics')}\n"
+            f"🔺 {mono('/setdp')}               — {fraktur('Set Display Photo')}\n"
+            f"🔺 {mono('/blockeduser')}         — {fraktur('View Blocked List')}\n"
+            f"🔺 {mono('/secretfunction')}      — {fraktur('This Menu')}\n"
+            f"🔺 {mono('/setwelcomevideo')}     — {fraktur('Set Welcome Video')}\n"
+            f"🔺 {mono('/removewelcomevideo')}  — {fraktur('Remove Welcome Video')}\n"
+            f"🔺 {mono('/setbot')}              — {fraktur('ON/OFF Bot')}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   /setbot — ON/OFF Bot (Owner)
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def cmd_setbot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if not await owner_only(update): return
+        args = context.args
+        if not args or args[0].lower() not in ["on", "off"]:
+            current = "ON" if db.is_bot_on() else "OFF"
+            await update.message.reply_text(
+                f"⚙️ {bold_serif('Bot Status')}\n\n"
+                f"📊 {sans_bold('Current')} : {mono(current)}\n\n"
+                f"📌 {sans_bold('Usage')}: {mono('/setbot on/off')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        new_state = args[0].lower() == "on"
+        db.set_bot_settings({"is_on": new_state})
+        status = "ON 🟢" if new_state else "OFF 🔴"
+        await update.message.reply_text(
+            f"✅ {bold_serif('Bot Status Updated')}\n\n"
+            f"📊 {sans_bold('Status')} : {mono(status)}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   CALLBACK QUERY HANDLER
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # Check if bot is ON
+        if not db.is_bot_on():
+            await update.callback_query.answer("⚠️ Bot is currently OFF", show_alert=True)
+            return
+
+        query = update.callback_query
+        await query.answer()
+        uid  = update.effective_user.id
+        data = query.data
+
+        # ── Cancel ───────────────────────────────────────────────────────────────
+        if data == "cancel_action":
+            await query.message.edit_text(f"🚫 {italic_serif('Cancelled.')}")
+            return
+
+        # ── Broadcast menu — owner only ──────────────────────────────────────────
+        if data == "broadcast_menu":
+            if not is_owner(uid):
+                await query.answer("🔒 Owner only", show_alert=True)
+                return
+            await query.message.reply_text(
+                f"{TOP}\n"
+                f"║  📢  {bold_serif('Broadcast Center')}  📢  ║\n"
+                f"{BOT}\n\n"
+                f"📝 {script('Reply to any message with')} {mono('/broadcast')}\n"
+                f"or use {mono('/broadcast your message')}\n\n"
+                f"✨ {italic_serif('Button animation + live progress is enabled.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Settings menu — owner only ──────────────────────────────────────────
+        if data == "settings_menu":
+            if not is_owner(uid):
+                await query.answer("🔒 Owner only", show_alert=True)
+                return
+            current_status = "ON 🟢" if db.is_bot_on() else "OFF 🔴"
+            keyboard = [
+                [InlineKeyboardButton(f"🟢 Bot is {current_status}", callback_data="toggle_bot")],
+                [InlineKeyboardButton("🔙 Back", callback_data="back_to_start")],
+            ]
+            await query.message.reply_text(
+                f"{TOP}\n"
+                f"║  ⚙️  {bold_serif('Bot Settings')}  ⚙️  ║\n"
+                f"{BOT}\n\n"
+                f"📊 {sans_bold('Bot Status')} : {mono(current_status)}\n"
+                f"🆔 {sans_bold('Owner ID')}  : `{OWNER_ID}`\n"
+                f"🔑 {sans_bold('API ID')}    : `{TELEGRAM_API_ID}`\n"
+                f"🔐 {sans_bold('API Hash')}  : `{TELEGRAM_API_HASH[:8]}...`\n\n"
+                f"{DIV}\n"
+                f"💡 {italic_serif('Toggle bot status below')}",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+            return
+
+        # ── Toggle bot ────────────────────────────────────────────────────────────
+        if data == "toggle_bot":
+            if not is_owner(uid):
+                await query.answer("🔒 Owner only", show_alert=True)
+                return
+            current = db.is_bot_on()
+            db.set_bot_settings({"is_on": not current})
+            new_status = "ON 🟢" if not current else "OFF 🔴"
+            await query.message.edit_text(
+                f"✅ {bold_serif('Bot Status Updated')}\n\n"
+                f"📊 {sans_bold('Status')} : {mono(new_status)}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Back to start ─────────────────────────────────────────────────────────
+        if data == "back_to_start":
+            await cmd_start(update, context)
+            return
+
+        # ── Commands — full list inline ──────────────────────────────────────────
+        if data == "commands":
+            await query.message.reply_text(SID_MASTER_MENU, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        # ── Flow Menu — flow bot commands ────────────────────────────────────────
+        if data == "flow_menu":
+            await query.message.reply_text(SID_FLOW_BOT_MENU, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        # ── Status — user's actual hosted accounts ───────────────────────────────
+        if data == "status":
+            accounts = db.get_accounts(uid)
+            hosted   = [a for a in accounts if a.get("hosted")]
+            if not hosted:
+                await query.message.reply_text(
+                    f"❌ {bold_serif('No Userbot Hosted')}\n\n"
+                    f"{script('Use /host to deploy your first account.')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+                return
+            import datetime
+            lines = []
+            for acct in hosted:
+                slot     = acct.get("slot", 0)
+                alive    = runner.is_running(uid, slot)
+                uptime   = runner.get_uptime(uid, slot) if alive else "—"
+                hosted_at = acct.get("hosted_at", 0)
+                since = datetime.datetime.fromtimestamp(hosted_at).strftime("%d %b %Y") if hosted_at else "—"
+                icon  = "🟢" if alive else "🔴"
+                phone = _phone_label(acct)
+                lines.append(
+                    f"{icon} {sans_bold('Acc #' + str(slot+1))} — {mono(phone)}\n"
+                    f"   ⏱️ {uptime}   📅 {since}"
+                )
+            footer = ""
+            if any(not runner.is_running(uid, a["slot"]) for a in hosted):
+                footer = f"\n\n🔄 {italic_serif('/restart se revive karo.')}"
+            await query.message.reply_text(
+                f"{TOP}\n║  📊  {double_struck('Userbot Status')}  📊  ║\n{BOT}\n\n"
+                + "\n\n".join(lines) +
+                f"\n\n{DIV}"
+                f"\n⚡ {sans_bold('Version')} : {mono('v6.0-SID-DYNAMIC')}"
+                f"{footer}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Logout from menu — show account selector ─────────────────────────────
+        if data == "menu_logout":
+            accounts = db.get_accounts(uid)
+            hosted   = [a for a in accounts if a.get("hosted")]
+            if not hosted:
+                await query.message.reply_text(
+                    f"❌ {italic_serif('Koi active userbot nahi hai.')}"
+                )
+                return
+            if len(hosted) == 1:
+                acct  = hosted[0]
+                slot  = acct["slot"]
+                phone = _phone_label(acct)
+                kb = [[
+                    InlineKeyboardButton("✅ Haan, Logout Karo", callback_data=f"confirm_logout_{slot}"),
+                    InlineKeyboardButton("❌ Cancel",            callback_data="cancel_action"),
+                ]]
+                await query.message.reply_text(
+                    f"⚠️ {bold_serif('Logout Confirmation')}\n\n"
+                    f"📱 {sans_bold('Account')} : {mono(phone)}\n\n"
+                    f"{script('Session delete ho jayega.')}\n"
+                    f"{italic_serif('Dobara /host se add kar sakte ho.')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup(kb),
+                )
+            else:
+                kb = []
+                for acct in hosted:
+                    slot  = acct["slot"]
+                    phone = _phone_label(acct)
+                    alive = runner.is_running(uid, slot)
+                    icon  = "🟢" if alive else "🔴"
+                    kb.append([InlineKeyboardButton(
+                        f"{icon} Logout #{slot+1} — {phone}",
+                        callback_data=f"logout_acc_{slot}",
+                    )])
+                kb.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_action")])
+                await query.message.reply_text(
+                    f"🗑️ {bold_serif('Kaunsa Account Logout Karna Hai?')}\n\n"
+                    f"{script('Select below')} 👇",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup(kb),
+                )
+            return
+
+        # ── Support ───────────────────────────────────────────────────────────────
+        if data == "support":
+            await query.message.reply_text(
+                f"{TOP}\n║  📞  {double_struck('Support Center')}  📞  ║\n{BOT}\n\n"
+                f"👤 {sans_bold('Bot Owner')}  : {SUPPORT_USERNAME}\n"
+                f"⚡ {sans_bold('Response')}   : {script('Fast')}\n\n"
+                f"{DIV}\n"
+                f"🔧 {bold_serif('Pehle Yeh Try Karo:')}\n\n"
+                f"🔹 /myaccounts — {italic_serif('sab accounts dekho')}\n"
+                f"🔹 /restart    — {italic_serif('userbot restart karo')}\n"
+                f"🔹 /status     — {italic_serif('status check karo')}\n"
+                f"🔹 /logout     — {italic_serif('aur dobara /host karo')}\n\n"
+                f"{DIV}\n"
+                f"🤖 {bold_serif('Bot Owner')}: {SUPPORT_USERNAME}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Help & Guide — step-by-step ──────────────────────────────────────────
+        if data == "help":
+            await query.message.reply_text(
+                f"╔══════════════════════════════╗\n"
+                f"║  📖  {bold_serif('BOT USAGE GUIDE')}  📖  ║\n"
+                f"╚══════════════════════════════╝\n\n"
+                f"{'━'*30}\n"
+                f"🚀 {sans_bold('STEP 1')} — {bold_serif('Bot Start Karo')}\n"
+                f"{'━'*30}\n"
+                f"➡️ {script('Is bot pe')} /start {script('bhejo')}\n"
+                f"✅ {italic_serif('Welcome screen aayega')}\n\n"
+                f"{'━'*30}\n"
+                f"📱 {sans_bold('STEP 2')} — {bold_serif('Account Host Karo')}\n"
+                f"{'━'*30}\n"
+                f"➡️ {mono('Host My Userbot')} {script('button tap karo')}\n"
+                f"➡️ {script('Apna phone number enter karo')}\n"
+                f"    {mono('Format: +91XXXXXXXXXX')}\n"
+                f"➡️ {script('Telegram se OTP aayega')}\n"
+                f"    💡 {italic_serif('OTP spaces ke saath bhejo:')}\n"
+                f"    {mono('1 2 3 4 5')} ← {italic_serif('aisa karo')}\n"
+                f"➡️ {script('2FA hai toh password bhi daalo')}\n"
+                f"✅ {italic_serif('Userbot deploy ho jayega!')}\n\n"
+                f"{'━'*30}\n"
+                f"⚡ {sans_bold('STEP 3')} — {bold_serif('Commands Chalao')}\n"
+                f"{'━'*30}\n"
+                f"➡️ {script('Kisi bhi chat mein jao')}\n"
+                f"➡️ {script('Dot')} {mono('.')} {script('se command likho:')}\n\n"
+                f"    {mono('.alive')}  → {script('Bot alive check karo')}\n"
+                f"    {mono('.ping')}   → {script('Speed check')}\n"
+                f"    {mono('.help')}   → {script('Poori command list')}\n"
+                f"    {mono('.attack')} → {script('Kisi pe reply karke attack')}\n"
+                f"    {mono('.roast')}  → {script('Kisi ko roast karo')}\n"
+                f"    {mono('.nuke')}   → ☢️ {script('Nuclear strike')}\n"
+                f"    {mono('.spray <text>')} → {script('Spam shuru')}\n"
+                f"    {mono('.stopspray')}    → {script('Spam band karo')}\n\n"
+                f"{'━'*30}\n"
+                f"🔄 {sans_bold('STEP 4')} — {bold_serif('Manage Karo')}\n"
+                f"{'━'*30}\n"
+                f"    /myaccounts — {script('Sab accounts')}\n"
+                f"    /status     — {script('Status dekho')}\n"
+                f"    /restart    — {script('Restart karo')}\n"
+                f"    /logout     — {script('Logout karo')}\n"
+                f"    /host       — {script('Naya account add karo')}\n\n"
+                f"{'━'*30}\n"
+                f"⚠️ {sans_bold('IMPORTANT')}\n"
+                f"{'━'*30}\n"
+                f"🔸 {italic_serif('Sirf tumhara OWN account command chalayega')}\n"
+                f"🔸 {italic_serif('Kisi dusre ka message ignore hoga')}\n"
+                f"🔸 {italic_serif('Max')} {mono('3')} {italic_serif('accounts ek saath host ho sakte hain')}\n\n"
+                f"{'━'*30}\n"
+                f"🌟 {bold_serif('Bot Owner')}: {SUPPORT_USERNAME}\n"
+                f"⚡ {bold_serif('Powered by SIDxBOT')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Restart account ──────────────────────────────────────────────────────
+        if data.startswith("restart_acc_"):
+            try:
+                slot = int(data.split("_")[-1])
+            except ValueError:
+                return
+            acct = db.get_account(uid, slot)
+            if not acct:
+                await query.message.reply_text(f"❌ {italic_serif('Account not found.')}")
+                return
+            msg = await query.message.reply_text(
+                f"🔄 {sans_bold('Restarting Account')} #{slot+1}..."
+            )
+            ok = runner.restart_userbot(
+                uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+                acct.get("session_string", ""), str(uid),
+            )
+            if ok:
+                await msg.edit_text(
+                    f"✅ {double_struck('Account #' + str(slot+1) + ' Restarted')}!\n\n"
+                    f"🟢 {sans_bold('Status')}: {script('Running')}\n"
+                    f"⚡ {italic_serif('Test with')} {mono('.alive')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            else:
+                await msg.edit_text(f"❌ {bold_serif('Restart Failed')}\n📩 {SUPPORT_USERNAME}")
+            return
+
+        # ── Start (stopped) account ───────────────────────────────────────────────
+        if data.startswith("start_acc_"):
+            try:
+                slot = int(data.split("_")[-1])
+            except ValueError:
+                return
+            acct = db.get_account(uid, slot)
+            if not acct:
+                await query.message.reply_text(f"❌ {italic_serif('Account not found.')}")
+                return
+            msg = await query.message.reply_text(
+                f"▶️ {sans_bold('Starting Account')} #{slot+1}..."
+            )
+            ok = runner.start_userbot(
+                uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+                acct.get("session_string", ""), str(uid),
+            )
+            if ok:
+                await msg.edit_text(
+                    f"✅ {double_struck('Account #' + str(slot+1) + ' Started')}!\n\n"
+                    f"🟢 {sans_bold('Status')}: {script('Running')}\n"
+                    f"⚡ {italic_serif('Test with')} {mono('.alive')}",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+            else:
+                await msg.edit_text(f"❌ {bold_serif('Start Failed')}\n📩 {SUPPORT_USERNAME}")
+            return
+
+        # ── Logout account — show confirm prompt ─────────────────────────────────
+        if data.startswith("logout_acc_"):
+            try:
+                slot = int(data.split("_")[-1])
+            except ValueError:
+                return
+            acct  = db.get_account(uid, slot)
+            if not acct:
+                await query.message.reply_text(f"❌ {italic_serif('Account not found.')}")
+                return
+            phone = _phone_label(acct)
+            keyboard = [[
+                InlineKeyboardButton("✅ Haan, Logout Karo", callback_data=f"confirm_logout_{slot}"),
+                InlineKeyboardButton("❌ Cancel",            callback_data="cancel_action"),
+            ]]
+            await query.message.reply_text(
+                f"⚠️ {bold_serif('Logout Confirmation')}\n\n"
+                f"📱 {sans_bold('Account')} #{slot+1} : {mono(phone)}\n\n"
+                f"{script('Session delete ho jayega.')}\n"
+                f"{italic_serif('Dobara /host se add kar sakte ho.')}",
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+            return
+
+        # ── Confirm logout ────────────────────────────────────────────────────────
+        if data.startswith("confirm_logout_"):
+            try:
+                slot = int(data.split("_")[-1])
+            except ValueError:
+                return
+            acct  = db.get_account(uid, slot)
+            phone = _phone_label(acct) if acct else f"#{slot+1}"
+            await _do_logout(uid, slot)
+            await query.message.edit_text(
+                f"{TOP}\n║  👋  {bold_serif('Logged Out')}  👋  ║\n{BOT}\n\n"
+                f"📱 {sans_bold('Account')} : {mono(phone)}\n"
+                f"🗑️ {sans_bold('Session')} : {script('Cleared')}\n\n"
+                f"🚀 {fraktur('Re-deploy anytime:')} /host\n"
+                f"📱 {fraktur('See accounts:')} /myaccounts",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # ── Add another account (same as /host entry) ─────────────────────────────
+        if data == "add_acc":
+            accounts = db.get_accounts(uid)
+            hosted   = [a for a in accounts if a.get("hosted")]
+            if len(hosted) >= MAX_ACCOUNTS_PER_USER:
+                await query.message.reply_text(
+                    f"📱 {bold_serif('Account Limit Reached')}\n\n"
+                    f"{script('Maximum')} {mono(str(MAX_ACCOUNTS_PER_USER))} {script('accounts.')}\n"
+                    f"🗑️ {script('Logout one first:')} /logout",
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+                return
+            await query.message.reply_text(
+                f"🚀 {bold_serif('Add New Account')}\n\n"
+                f"{script('Send')} /host {script('to start the login flow.')}",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   AUTO HEALTH CHECK
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def auto_health_check(context: ContextTypes.DEFAULT_TYPE):
+        if not db.is_bot_on():
+            return
+        for uid_str in db.get_all_users():
+            uid = int(uid_str)
+            if db.is_blocked(uid): continue
+            for acct in db.get_accounts(uid):
+                if not acct.get("hosted") or not acct.get("session_string"): continue
+                slot = acct["slot"]
+                if not runner.is_running(uid, slot):
+                    runner.start_userbot(
+                        uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+                        acct["session_string"], uid_str,
+                    )
+
+
+    # ════════════════════════════════════════════════════════════════════════════════
+    #   STARTUP & MAIN
+    # ════════════════════════════════════════════════════════════════════════════════
+
+    async def post_init(application: Application):
+        await application.bot.set_my_commands([
+            BotCommand("start",           "Grand Welcome"),
+            BotCommand("help",            "All Commands"),
+            BotCommand("commands",        "Master Features Menu"),
+            BotCommand("flowmenu",        "Flow Bot Features Menu"),
+            BotCommand("host",            "Add & Deploy Account"),
+            BotCommand("myaccounts",      "Manage All Accounts"),
+            BotCommand("status",          "Check Userbot Status"),
+            BotCommand("restart",         "Restart Userbot"),
+            BotCommand("logout",          "Logout an Account"),
+            BotCommand("support",         "Get Support"),
+            BotCommand("supportraid",     "Pro Raid (Premium)"),
+            BotCommand("restartall",      "Restart All (Owner)"),
+            BotCommand("refresh",         "Refresh State (Owner)"),
+            BotCommand("sudolist",        "Sudo Users (Owner)"),
+            BotCommand("setdp",           "Set Display Photo (Owner)"),
+            BotCommand("block",           "Block User (Owner)"),
+            BotCommand("unblock",         "Unblock User (Owner)"),
+            BotCommand("blockeduser",     "Blocked List (Owner)"),
+            BotCommand("stats",           "Bot Statistics (Owner)"),
+            BotCommand("secretfunction",  "Secret Commands (Owner)"),
+            BotCommand("setwelcomevideo", "Set Welcome Video (Owner)"),
+            BotCommand("removewelcomevideo", "Remove Welcome Video (Owner)"),
+            BotCommand("broadcast",         "Broadcast Message (Owner)"),
+            BotCommand("setbot",          "ON/OFF Bot (Owner)"),
+        ])
+        if db.is_bot_on():
+            count = 0
+            for uid_str in db.get_all_users():
+                uid = int(uid_str)
+                if db.is_blocked(uid): continue
+                for acct in db.get_accounts(uid):
+                    if not acct.get("hosted") or not acct.get("session_string"): continue
+                    ok = runner.start_userbot(
+                        uid, acct["slot"], str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
+                        acct["session_string"], uid_str,
+                    )
+                    if ok: count += 1
+            logger.info(f"[STARTUP] Auto-started {count} userbots.")
+        else:
+            logger.info("[STARTUP] Bot is OFF — skipping auto-start.")
+
+
+    def main():
+        if not BOT_TOKEN:  raise ValueError("BOT_TOKEN not set!")
+        if not OWNER_ID:   raise ValueError("OWNER_ID not set!")
+
+        app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+
+        host_conv = ConversationHandler(
+            entry_points=[
+                CommandHandler("host", cmd_host_start),
+                CallbackQueryHandler(cmd_host_start, pattern="^host$"),
+            ],
+            states={
+                ASK_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, host_got_phone)],
+                ASK_CODE:  [MessageHandler(filters.TEXT & ~filters.COMMAND, host_got_code)],
+                ASK_2FA:   [MessageHandler(filters.TEXT & ~filters.COMMAND, host_got_2fa)],
+            },
+            fallbacks=[CommandHandler("cancel", host_cancel)],
+            allow_reentry=True,
+        )
+
+        app.add_handler(CommandHandler("start",           cmd_start))
+        app.add_handler(CommandHandler("help",            cmd_help))
+        app.add_handler(CommandHandler("commands",        cmd_commands))
+        app.add_handler(CommandHandler("flowmenu",        cmd_flowmenu))
+        app.add_handler(host_conv)
+        app.add_handler(CommandHandler("myaccounts",      cmd_myaccounts))
+        app.add_handler(CommandHandler("status",          cmd_status))
+        app.add_handler(CommandHandler("restart",         cmd_restart))
+        app.add_handler(CommandHandler("logout",          cmd_logout))
+        app.add_handler(CommandHandler("support",         cmd_support))
+        app.add_handler(CommandHandler("supportraid",     cmd_supportraid))
+        app.add_handler(CommandHandler("restartall",      cmd_restartall))
+        app.add_handler(CommandHandler("refresh",         cmd_refresh))
+        app.add_handler(CommandHandler("sudolist",        cmd_sudolist))
+        app.add_handler(CommandHandler("setdp",           cmd_setdp))
+        app.add_handler(CommandHandler("block",           cmd_block))
+        app.add_handler(CommandHandler("unblock",         cmd_unblock))
+        app.add_handler(CommandHandler("blockeduser",     cmd_blockeduser))
+        app.add_handler(CommandHandler("stats",           cmd_stats))
+        app.add_handler(CommandHandler("secretfunction",  cmd_secretfunction))
+        app.add_handler(CommandHandler("setwelcomevideo", cmd_setwelcomevideo))
+        app.add_handler(CommandHandler("removewelcomevideo", cmd_removewelcomevideo))
+        app.add_handler(CommandHandler("broadcast",         cmd_broadcast))
+        app.add_handler(CommandHandler("setbot",            cmd_setbot))
+        app.add_handler(CallbackQueryHandler(callback_handler))
+
+        if app.job_queue:
+            app.job_queue.run_repeating(auto_health_check, interval=300, first=60)
+
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        logger.info("🤖  SID Premium Hoster Bot STARTED!")
+        logger.info(f"👑  Owner ID: {OWNER_ID}")
+        logger.info(f"📊  Bot Status: {'ON' if db.is_bot_on() else 'OFF'}")
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    if __name__ == "__main__":
+        main()
