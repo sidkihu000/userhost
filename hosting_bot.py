@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 START_TIME = time.time()
 
 # ─── BOT CONFIGURATION ────────────────────────────────────────────────────────
-BOT_TOKEN = "8883135152:AAGexieuRsioA9aXGau3dT823hw7Mw0M-qc"
+BOT_TOKEN = "8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY"
 OWNER_ID = 8115054010
 TELEGRAM_API_ID = 38843772
 TELEGRAM_API_HASH = "875fbb273801c8025d05e98173fca536"
@@ -73,11 +73,11 @@ DIPESH_MESSAGES = [
     "Teri ma mar du randyke 😂🦋", "KHAKE BURGUR TERI MA CHODU GHAR GHAR", "BAAP BOL MUJHE GAREEB",
     "Teri ma bhooki randy", "Chal na gawar", "Hakla kyun rha tu😂", "𝒯𝑒𝑟𝑖 𝑀𝑎 𝐺𝑎𝑑ℎ𝑒 𝐾𝑎 𝐿𝑜𝑑𝑎 𝐿𝑒𝑡𝑖 𝒉𝑒𝒉𝑒😂",
     "Tᴇʀᴀ ʙᴀᴀᴘ SᴛᴀᴛɪᴏN Mᴀɪ ʟᴀɴɢᴅᴀ Cʜᴀʟᴛᴀ 😂", "𝘛𝘦𝘳𝘪 𝘉𝘦𝘩𝘦𝘯 𝘒...𝘒𝘩𝘶𝘭𝘦𝘦 𝘈𝘢𝘮 𝘗𝘦𝘭𝘶 𝘒𝘶𝘵ɪʏᴀ 𝘣𝘢𝘯𝘢𝘬𝘦 REBEL Bʜɪ TᴇRᴇ JᴀIsA KʀᴛA TʜA Usʜᴇ ʜɪᴊᴅᴀ ʙᴀɴᴀ ᴅɪʏᴀ😂",
-    "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂𝒏𝒈𝒊 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
+    "Cʜᴜᴘ Bɪʜᴀʀɪ ʙᴀᴜɴᴇ😂", "𝑻𝒆𝒓𝒊 𝑴𝒂 𝑺𝒂𝒕𝒓𝒂 cur 𝑹𝒂𝒏𝒅🩷🤍🩶🖤💜👌🏻", "Cʜᴜᴅᴋᴇ Pɢʟ Bᴀɴ Gʏᴀ ᴄʏᴀ 😂",
     "HɪᴊDᴏ Kᴇ RᴀJᴀ TᴜJʜᴇ MᴇRᴇ LᴀNᴅ Kɪ sᴀʟᴀᴍɪ 😂", "Zᴏᴏ Kᴇ GᴏRɪLᴀ Sᴇ Tᴇʀɪ Mᴀ CʜᴜDᴡAU Oʀ ʙᴀᴄᴄʜᴇ Kᴀ NᴀMᴇ ᴅᴜ LADCHT DAS",
     "GᴀO Kᴇ SᴀRᴘᴀNᴄH Nᴇ Tᴇʀɪ Mᴀ ᴄʜᴏᴅɪ😂", "Chup rndyk kone mein baith 😂😂😂",
     "Teri Maa Ke भोसड़े में Theater Kholke सैयारा चाला दूंगा 🔈🔈🔥🔥🔥🔥😂😂😂🔈🔈🔈",
-    "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱᵏʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ Tᴇʀɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
+    "_✍🏻 𝐘ᴇ 𝐃ᴇ𝐊ʜ ˢᶜʳⁱᵖᵗ ˡⁱʰ ʳᵃʰᵃ ʰᵘ 𝐓ᴇʀɪ 𝐌ᴀA 𝐊ᴇ 𝐁ʜ𝐎sᴅᴇ 𝐌ᴇIɴ 😂😂😂", "SᴜAʀ Tᴇʀɪ MᴀA Kɪ CʜUᴛ 😌😌💤💤",
     "𝐓𝐔 𝐈𝐃𝐑 𝐂𝐎𝐌𝐄𝐁𝐀𝐂𝐊 𝐃𝐄𝐓𝐀 𝐑𝐄𝐇 𝐆𝐘𝐀 𝐔𝐃𝐇𝐑 𝐃ɪᴘᴇsʜ 𝐓ᴇʀ𝐈 𝐌ᴀA 𝐂ʜᴏᴅ 𝐆ʏA 🩷🩶🩵", "Choding ho rhi hai teri maa ki 😬👨🏻‍💻🔥",
     "Teri Maa Ki Chut Mein Loda Daluga Beta 🥵💯", "🧐 Teri maa ka bh🤪sda dikh rha hai 😎",
     " 😉🔥 Cya 😉🔥 re 😉 🔥 sapri 😉🔥 try 😉🔥 maa 😉🔥 tujh 😉🔥 nehlati 😉🔥 ny 😉🔥 ey 😉🔥 Cya 😉🔥",
@@ -85,7 +85,7 @@ DIPESH_MESSAGES = [
     "इस मंगलवार को ᴛᴇʀɪ ᴍᴀᴀ ᴋɪ ᴄʜᴜᴛ ᴋᴀ ʙʜᴀɴᴅᴀʀᴀ ʜᴏɢᴀ 😈😘👌🏻", " TᗴᖇI ᗰᗩᗩ Kᗩ ᗷOOᖇ ᗷᗴTᗩ 🤣🤮🔥😏🔥😂💞🌧️",
     "𝐌𝐀𝐀 𝐊𝐄 𝐋𝐎𝐃𝐄 🤮", "𝗣𝗘𝗛𝗟𝗘 𝗧𝗘𝗥𝗜 𝗕𝗘𝗛𝗘𝗡 𝗖𝗛𝗢𝗗𝗨𝗚𝗔 𝗙𝗜𝗥 𝗧𝗘𝗥𝗜 𝗠𝗔A 😆😂😆🔥🤢😂🤍😤",
     "ƇӇƲƤ ƬЄƦƖ Mƛƛ Ƙƛ ƁӇƠƧƊƛ ♻️", " 𝘚𝘱𝘢𝘮𝘮𝘦𝘳 𝘣𝘢𝘯𝘦𝘨𝘢 𝘳𝘢𝘯𝘥𝘪𝘬𝘦 🤢🔥", " 𝐀𝐉𝐀 𝐌🇨 𝐁𝐀𝐍𝐀𝐔 𝐓𝐔𝐉𝐇𝐄 𝐒𝐏𝐀𝐌𝐌𝐄𝐑 👻💥🤍😹👑",
-    "𝘣𝘰𝘭 𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 की जय 👑", " 😍 Teri 😡 Randi 🤪 Maa 😤 Ko 😎 Pel 😭 Dunga 😍",
+    "𝘣𝘰𝘭 𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢ᱯ की जय 👑", " 😍 Teri 😡 Randi 🤪 Maa 😤 Ko 😎 Pel 😭 Dunga 😍",
     "Idhar Aa Beta 🤪💔 Teri Maa Chodu 😂😘", " Oye Mazdur kaam pe ja 🔥⛏️🔥⛏️⛏️🔥⛏️💞💞🔥💞⛏️🔥💞⛏️⛏️",
     "Teri Maa Chodne K liye Pura Gc Khada Hai 🥴😁🩷💯", " Teri Maa Bio Mein #Proudrandi 💔🥀 likhti hai 🤩🔥🩷",
     "Rndyk lund se utr 😩👏🏻", "Arey Yarr Apni Maa Matt Nangi Kar 😩🔥💞😩⛏️🔥🥀🤩💞😩🔥😩🩷💞",
@@ -94,7 +94,7 @@ DIPESH_MESSAGES = [
     " 🥶 Are 😱 Mc 😩 Ye 🤔 Kaise 🤪 Kiya 😏 Teri 😎 Maa 😬 Randi 🙄 Hai 🤮 100% 😂",
     "🩷🩵🤍🩶🖤❤️💚 Ye sare dill teri maa k naam beta 😂😜🔥", " Hat peche hat tera baap Rebel aya 😂😂🥴😹🤲🏻💪🏻",
     "Leave le rndyk psnd nai aya tu meko 🤢👎🏻", "Teri maa chodu 💯 if yes then reply to my message 💀💀💀💪🏻🔥💯👆🏻💔😂😂💔💔💔",
-    "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢𝘱 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
+    "#𝐃ɪᴘᴇsʜ 𝘉𝘢𝘢ᱯ 𝐊𝐎 𝐃𝐁𝐀 𝐍𝐇𝐈 𝐏𝐀R𝐄 ᴄʏᴀ?? 🥶🥱😂", "😹 Tᴇʀɪ 🤪 RᴀNᴅɪ 😫 MᴀA 🤗 Kᴇ 🤢 BᴜR 🤣 Pᴇ 😤 LᴀAᴛ 🙄 MᴀR 😆 Kᴇ 😍 Tᴇʀɪ 😍 BᴇHᴇN 😈 CʜᴏOᴅ 😅 DᴜGᴀ 🤩",
     "GᴀRᴇᴇʙ Ghar Ke Ladke Baap Log Ke Gc Mein Kya Krr Rha 🤢👞", " 🔮 𝐘𝐄 𝐃𝐄𝐊𝐇 𝐉𝐀D𝐔 𝐒𝐄 𝐓𝐄𝐑𝐈 𝐌𝐀𝐀 𝐂𝐇𝐎𝐃 𝐃𝐈y𝐀 😂🪄😂🪄",
     " Teri Maa Ko बाहुबली style mein chodunga 🥶💔🤪😹", "Tumhare Pitashree 𝐃ɪᴘᴇsʜ 💯🔥🗿🌙",
     " Tery behn bole fuck me 𝐃ɪᴘᴇsʜ daddy 😍🌹💋", " तेरी माँ 𝐃ɪᴘᴇsʜ पापा ki दीवानी Since 2k10 😂🖕🏻🔥", " Cover le सस्ती रंडी k काले बच्चे 🤢🤮🖕🏻🥀"
@@ -128,6 +128,7 @@ SID_MASTER_MENU = """
 • `.rebel` / `.srebel`
 • `.sid` / `.ssid`
 • `.homies` / `.shomies`
+• `.rr` / `.srr`
 
 🚀 **POWER SPAM COMMANDS**
 • `.spam <count> <text>`
@@ -312,9 +313,6 @@ def register_userbot_engine(client: TelegramClient, user_id: int):
 
     @client.on(events.NewMessage())
     async def ub_mute_handler(event):
-        # NOTE: This runs for EVERY incoming/outgoing message.
-        # If the sender is in muted_users, we delete it instantly.
-        # This will work on any ID including OWNER_ID if muted.
         if event.sender_id in U_STATE['muted_users']:
             try:
                 await event.delete()
@@ -350,6 +348,7 @@ def register_userbot_engine(client: TelegramClient, user_id: int):
     register_raid("rebel", DIPESH_MESSAGES)
     register_raid("sid", RAPIST_MESSAGES)
     register_raid("homies", HOMIES_MESSAGES)
+    register_raid("rr", DIPESH_MESSAGES)
 
     @client.on(events.NewMessage(incoming=True))
     async def raid_trigger(event):
@@ -358,7 +357,7 @@ def register_userbot_engine(client: TelegramClient, user_id: int):
         array_map = {
             "attack": ATTACK_LIST, "roast": ROAST_LIST, "diss": DISS_LIST,
             "war": WAR_LIST, "savage": SAVAGE_LIST, "rebel": DIPESH_MESSAGES,
-            "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES
+            "sid": RAPIST_MESSAGES, "homies": HOMIES_MESSAGES, "rr": DIPESH_MESSAGES
         }
         for cmd, targets in U_STATE['active_raids'].items():
             if sender in targets:
@@ -2025,7 +2024,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{script('Session delete ho jayega.')}\n"
                 f"{italic_serif('Dobara /host se add kar sakte ho.')}",
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=InlineKeyboardMarkup(kb),
+                reply_markup=InlineKeyboardMarkup(keyboard),
             )
         else:
             kb = []
@@ -2231,6 +2230,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+
 # ════════════════════════════════════════════════════════════════════════════════
 #   AUTO HEALTH CHECK
 # ════════════════════════════════════════════════════════════════════════════════
@@ -2249,6 +2249,7 @@ async def auto_health_check(context: ContextTypes.DEFAULT_TYPE):
                     uid, slot, str(TELEGRAM_API_ID), TELEGRAM_API_HASH,
                     acct["session_string"], uid_str,
                 )
+
 
 # ════════════════════════════════════════════════════════════════════════════════
 #   STARTUP & MAIN
@@ -2296,6 +2297,7 @@ async def post_init(application: Application):
         logger.info(f"[STARTUP] Auto-started {count} userbots.")
     else:
         logger.info("[STARTUP] Bot is OFF — skipping auto-start.")
+
 
 def main():
     if not BOT_TOKEN:  raise ValueError("BOT_TOKEN not set!")
