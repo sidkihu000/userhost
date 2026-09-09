@@ -1,14 +1,14 @@
 # ════════════════════════════════════════════════════════════════
     #   HOSTER BOT CODE (MERGED WITH SID MASTER & FLOW BOT ENGINE)
     # ════════════════════════════════════════════════════════════════
-    import asyncio
-    import logging
-    import os
-    import time
-    import shutil
-    import random
-    from io import BytesIO
-    from telegram import (
+import asyncio
+import logging
+import os
+import time
+import shutil
+import random
+from io import BytesIO
+from telegram import (
         Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
     )
     from telegram.ext import (
