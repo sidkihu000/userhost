@@ -8,6 +8,8 @@ import os
 import time
 import shutil
 import random
+import db          # Added missing import
+import runner      # Added missing import
 from io import BytesIO
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
