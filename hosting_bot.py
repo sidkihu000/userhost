@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 START_TIME = time.time()
 MAX_ACCOUNTS_PER_USER = 3   # max accounts one user can host
 BOT_TOKEN = "8760438442:AAHODDkjr0rclSB7rnR67ac3UDX8tXYwCKY"
+OWNER_ID = 8115054010
 
 # ─── CONVERSATION STATES ──────────────────────────────────────────────────────
 ASK_PHONE, ASK_CODE, ASK_2FA = range(3)
